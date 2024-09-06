@@ -35,7 +35,7 @@ int oapve_rc_get_tile_cost(oapve_ctx_t* ctx, int tile_idx)
     int step = 8;
     ALIGNED_16(pel temp[64]);
     int sum = 0;
-
+    ctx->ti[tile_idx].rc.number_pixel = 0;
     for (int c = Y_C; c < ctx->num_comp; c++)
     {
         int step_w = c ? 8 << ctx->ch_sft_w : 8;

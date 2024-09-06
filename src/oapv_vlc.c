@@ -815,8 +815,8 @@ int oapvd_vlc_frame_size(oapv_bs_t* bs)
 static int dec_vlc_quantization_matrix(oapv_bs_t* bs, oapv_fh_t* fh)
 {
     u32 t0;
-    int num_copm = oapv_get_chroma_sft_w(fh->fi.chroma_format_idc);
-    for (int cidx = 0; cidx < num_copm; cidx++)
+    int num_comp = oapv_get_num_comp(fh->fi.chroma_format_idc);
+    for (int cidx = 0; cidx < num_comp; cidx++)
     {
         for (int y = 0; y < OAPV_BLOCK_H; y++)
         {
