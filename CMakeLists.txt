@@ -29,7 +29,7 @@ if(NOT RESULT EQUAL 0)
         "version.txt file doesn't exist!\n"
         "Since your working directory doesn't contain a git repository you must provide \"${CMAKE_SOURCE_DIR}/version.txt\" file containing a valid version string.\n"
         "The version string provided to version.txt must match the following format:\n\tv[VERSION_MAJOR].[VERSION_MINOR].[VERSION_PATCH]\n"
-        "To get the information on version of the downloaded library please follow the link below:\n\t https://github.com/mpeg5/xeve"
+        "To get the information on version of the downloaded library please follow the link below:\n\t https://github.com/openapv/openapv"
         )
   endif()
 
@@ -107,13 +107,13 @@ endif()
 
 # Packaging
 include(InstallRequiredSystemLibraries)
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 
-set(CPACK_PACKAGE_NAME "OAPV")
-set(CPACK_PACKAGE_VENDOR "CPNCF")
-set(CPACK_PACKAGE_CONTACT "https://github.com/cpncf/oapv")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "OAPV - professional video codec")
+set(CPACK_PACKAGE_NAME "OpenAPV")
+set(CPACK_PACKAGE_VENDOR "OpenAPV")
+set(CPACK_PACKAGE_CONTACT "https://github.com/openapv/oapv")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Open Advanced Professional Video Codec")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
