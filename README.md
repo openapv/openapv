@@ -80,5 +80,4 @@ cpack -G TGZ
 
 ## License
 
-BSD-3-Clause
-See [COPYING](COPYING) file for details.
+See [LICENSE](LICENSE) file for details.
