@@ -37,7 +37,7 @@ extern "C"
 {
 #endif
 #define OAPV_EXPORT
-//#include <oapv_exports.h>
+#include <oapv/oapv_exports.h>
 
 /* size of macroblock */
 #define OAPV_LOG2_MB                    (4)
