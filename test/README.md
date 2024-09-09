@@ -1,7 +1,7 @@
 # Materials for APV codec testing
 
-## Test bitstreams
-"bitstream" folder has several encoded bitstreams for decoder conformance testing.
+## Test bitstream
+"bitstream" folder has the encoded bitstreams for decoder conformance testing.
 
 |No. | Bitstream Name | Description | Profile | Level | Frame Rate | Resolution | # of Frame | MD5 sum of bitstream | MD5 sum of decoded   frames|
 |--|--|--|--|--|--|--|--|--|--|
@@ -17,3 +17,8 @@
 |10 | qp_E | Set different QP   betwee luma and chroma | Baseline Profile | 2.1 | 60 fps | 3840x2160 | 3 | a4d95f42d12ca63d1183d1476eeafd16 | b894e783b08be5e8aa4a84482fa48402|
 |11 | syn_A | Exercise a synthetic   image with QP = 0 and QP = 51 | Baseline Profile | 2.1 | 60 fps | 1920x1080 | 2 | a0cfae4a37c0b395d3f8b92ef7f5a3e0 | e1b2a1b9d7b7830c2ea43548683d84e4|
 |12 | syn_B | Exercise a synthetic   image with Tile QP variation in Frame | Baseline Profile | 2.1 | 60 fps | 1920x1080 | 2 | 595490398297385d6373e533efdb4454 | 3d8ad200103e825157ccd9266420ba96|
+
+
+
+## Test sequence
+"sequence" folder has the uncompressed video sequence for encoder testing.
