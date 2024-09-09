@@ -69,7 +69,7 @@ static void imgb_to_block(oapv_imgb_t *imgb, int c, int x_l, int y_l, int w_l, i
 
 static void imgb_to_block_p210(oapv_imgb_t* imgb, int c, int x_l, int y_l, int w_l, int h_l, s16* block)
 {
-    u8* src, * dst;
+    u16* src, * dst;
     int sft_hor, sft_ver;
     int bd = OAPV_CS_GET_BYTE_DEPTH(imgb->cs);
     int format = OAPV_CS_GET_FORMAT(imgb->cs);
@@ -89,27 +89,18 @@ static void imgb_to_block_p210(oapv_imgb_t* imgb, int c, int x_l, int y_l, int w
         tc = 1;
     }
 
-    src = ((u8*)imgb->a[tc]) + ((y_l >> sft_ver) * imgb->s[tc]) + ((x_l * bd * size_scale) >> sft_hor);
-    dst = (u8*)block;
+    u32 src_s = imgb->s[tc] >> (bd > 1 ? 1 : 0);
+    src = ((u16*)imgb->a[tc]) + ((y_l >> sft_ver) * src_s) + ((x_l * size_scale) >> sft_hor);
+    dst = (u16*)block;
 
-    for (int i = 0; i < (h_l); i++)
-    {
-        oapv_mcpy(dst, src, (w_l)*bd * size_scale);
-
-        src += imgb->s[tc];
-        dst += (w_l)*bd * size_scale;
-    }
-
-    u16* tmp_src = (u16*)block;
-    u16* tmp_dst = (u16*)block;
     for (int i = 0; i < (h_l); i++)
     {
         for (int j = 0; j < (w_l); j++)
         {
-            tmp_dst[j] = (tmp_src[j * size_scale + (c >> 1)] >> 6);
+            dst[j] = (src[j * size_scale + (c >> 1)] >> 6);
         }
-        tmp_src += w_l * size_scale;
-        tmp_dst += w_l;
+        src += src_s;
+        dst += w_l;
     }
 }
 static void block_to_imgb(s16 *block, int c, int x_l, int y_l, int w_l, int h_l, oapv_imgb_t *imgb)
