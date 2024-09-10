@@ -1252,8 +1252,8 @@ int oapve_param_default(oapve_param_t *param)
     param->tile_h_mb = 16;
 
     param->profile_idc = OAPV_PROFILE_422_10;
-    param->level_idc = (int)(2.1 * 30);
-    param->band_idc = 2;
+    param->level_idc = (int)(4.1 * 30);
+    param->band = 2;
 
     return OAPV_OK;
 }
