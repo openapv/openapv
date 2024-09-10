@@ -116,8 +116,12 @@ static const ARGS_OPT enc_args_opts[] = {
         "profile setting flag  (422-10)"
     },
     {
-        ARGS_NO_KEY,  "level-idc", ARGS_VAL_TYPE_INTEGER, 0, NULL,
-        "level setting "
+        ARGS_NO_KEY,  "level", ARGS_VAL_TYPE_STRING, 0, NULL,
+        "level setting (1, 1.1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 6.1, 7, 7.1)"
+    },
+    {
+        ARGS_NO_KEY,  "band", ARGS_VAL_TYPE_INTEGER, 0, NULL,
+        "band setting (0, 1, 2, 3)"
     },
     {
         ARGS_NO_KEY,  "frames", ARGS_VAL_TYPE_INTEGER, 0, NULL,
@@ -195,6 +199,8 @@ typedef struct {
     int            seek;
     int            threads;
     char           profile[32];
+    char           level[32];
+    int            band;
     char           bitrate[64];
     char           q_matrix_y[512];
     char           q_matrix_u[512];
@@ -231,6 +237,10 @@ static ARGS_VAR* args_init_vars(ARGS_PARSER* args, oapve_param_t* param)
     args_set_variable_by_key_long(opts, "seek", &vars->seek);
     args_set_variable_by_key_long(opts, "profile", vars->profile);
     strncpy(vars->profile, "422-10", sizeof(vars->profile) - 1);
+    args_set_variable_by_key_long(opts, "level", vars->level);
+    strncpy(vars->level, "4.1", sizeof(vars->level) - 1);
+    args_set_variable_by_key_long(opts, "band", &vars->band);
+    vars->band = 2; /* default */
     args_set_variable_by_key_long(opts, "bitrate", vars->bitrate);
     args_set_variable_by_key_long(opts, "q-matrix-y", vars->q_matrix_y);
     strncpy(vars->q_matrix_y, "", sizeof(vars->q_matrix_y) - 1);
@@ -248,7 +258,6 @@ static ARGS_VAR* args_init_vars(ARGS_PARSER* args, oapve_param_t* param)
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, qp);
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, fps);
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, preset);
-    ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, level_idc);
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, rc_type);
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, use_filler);
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, tile_w_mb);
@@ -491,6 +500,13 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
     }
 
     param->csp = vars->input_csp;
+
+    /* update level idc */
+    double tmp_level = 0;
+    sscanf(vars->level, "%lf", &tmp_level);
+    param->level_idc = tmp_level * 30;
+    /* update band idc */
+    param->band_idc = vars->band;
 
     return 0;
 }
