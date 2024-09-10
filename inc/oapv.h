@@ -359,7 +359,7 @@ struct oapve_param {
     /* level */
     int level_idc;
     /* band */
-    int band;
+    int band_idc;
     /* width of input frame */
     int w;
     /* height of input frame */

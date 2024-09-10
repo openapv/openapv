@@ -200,6 +200,7 @@ typedef struct {
     int            threads;
     char           profile[32];
     char           level[32];
+    int            band;
     char           bitrate[64];
     char           q_matrix_y[512];
     char           q_matrix_u[512];
@@ -238,6 +239,8 @@ static ARGS_VAR* args_init_vars(ARGS_PARSER* args, oapve_param_t* param)
     strncpy(vars->profile, "422-10", sizeof(vars->profile) - 1);
     args_set_variable_by_key_long(opts, "level", vars->level);
     strncpy(vars->level, "4.1", sizeof(vars->level) - 1);
+    args_set_variable_by_key_long(opts, "band", &vars->band);
+    vars->band = 2; /* default */
     args_set_variable_by_key_long(opts, "bitrate", vars->bitrate);
     args_set_variable_by_key_long(opts, "q-matrix-y", vars->q_matrix_y);
     strncpy(vars->q_matrix_y, "", sizeof(vars->q_matrix_y) - 1);
@@ -261,7 +264,6 @@ static ARGS_VAR* args_init_vars(ARGS_PARSER* args, oapve_param_t* param)
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, tile_h_mb);
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, qp_cb_offset);
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, qp_cr_offset);
-    ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, band);
 
     return vars;
 }
@@ -503,6 +505,8 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
     double tmp_level = 0;
     sscanf(vars->level, "%lf", &tmp_level);
     param->level_idc = tmp_level * 30;
+    /* update band idc */
+    param->band_idc = vars->band;
 
     return 0;
 }

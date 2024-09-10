@@ -280,7 +280,7 @@ void oapve_set_frame_header(oapve_ctx_t * ctx, oapv_fh_t * fh)
     oapv_mset(fh, 0, sizeof(oapv_fh_t));
     fh->fi.profile_idc = ctx->param->profile_idc;
     fh->fi.level_idc = ctx->param->level_idc;
-    fh->fi.band_idc = ctx->param->band;
+    fh->fi.band_idc = ctx->param->band_idc;
     fh->fi.frame_width  = ctx->param->w;
     fh->fi.frame_height = ctx->param->h;
     fh->fi.chroma_format_idc = ctx->cfi;
