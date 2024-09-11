@@ -44,8 +44,6 @@
 #include "oapv.h"
 #include "oapv_port.h"
 #include "oapv_tpool.h"
-#include <inttypes.h>
-#include <stdio.h>
 
 #define OAPV_VLC_TREE_LEVEL       2
 #define OAPV_MIN_DC_LEVEL_CTX     0
@@ -246,9 +244,6 @@ struct oapv_aui
  *****************************************************************************/
 typedef struct oapve_ctx oapve_ctx_t;
 typedef struct oapve_core oapve_core_t;
-typedef struct oapv_md_info_list oapv_md_info_list_t;
-typedef struct oapv_md oapv_md_t;
-typedef struct oapv_mdp oapv_mdp_t;
 
 /*****************************************************************************
  * pre-defined function structure

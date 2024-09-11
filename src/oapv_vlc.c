@@ -696,12 +696,12 @@ int oapvd_vlc_run_length_cc(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs,
 
 int oapve_vlc_metadata(oapv_md_t* md, oapv_bs_t* bs)
 {
-    oapv_bsw_write(bs, md->metadata_size, 32);
-    oapv_mdp_t* mdp = md->metadata_payload;
+    oapv_bsw_write(bs, md->md_size, 32);
+    oapv_mdp_t* mdp = md->md_payload;
 
     while (mdp != NULL)
     {
-        u32 mdp_pltype = mdp->metadata_payload_type;
+        u32 mdp_pltype = mdp->pld_type;
         while (mdp_pltype >= 255)
         {
             oapv_bsw_write(bs, 0xFF, 8);
@@ -709,7 +709,7 @@ int oapve_vlc_metadata(oapv_md_t* md, oapv_bs_t* bs)
         }
         oapv_bsw_write(bs, mdp_pltype, 8);
 
-        u32 mdp_size = mdp->metadata_payload_size;
+        u32 mdp_size = mdp->pld_size;
         while (mdp_size >= 255)
         {
             oapv_bsw_write(bs, 0xFF, 8);
@@ -717,8 +717,8 @@ int oapve_vlc_metadata(oapv_md_t* md, oapv_bs_t* bs)
         }
         oapv_bsw_write(bs, mdp_size, 8);
 
-        for (u32 i=0; i < mdp->metadata_payload_size; i++) {
-            u8* payload_data = (u8*)mdp->data;
+        for (u32 i=0; i < mdp->pld_size; i++) {
+            u8* payload_data = (u8*)mdp->pld_data;
             oapv_bsw_write(bs, payload_data[i], 8);
         }
 

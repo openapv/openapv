@@ -33,6 +33,8 @@
 #define _OAPV_VLC_H_
 
 #include "oapv_def.h"
+#include "oapv_metadata.h"
+
 
 void oapve_set_frame_header(oapve_ctx_t * ctx, oapv_fh_t * fh);
 int  oapve_vlc_frame_info(oapv_bs_t* bs, oapv_fi_t* fi);
