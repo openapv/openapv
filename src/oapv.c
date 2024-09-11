@@ -957,7 +957,7 @@ static int enc_frame(oapve_ctx_t *ctx, oapv_imgb_t *imgb, oapv_bitb_t *bitb, oap
     {
         oapve_rc_get_tile_cost_thread(ctx, &cost_sum);
 
-        double bits_pic = (double)(ctx->param->bitrate * 1000 / ctx->param->fps);
+        double bits_pic = ((double)ctx->param->bitrate * 1000) / ctx->param->fps;
         for (int i = 0; i < ctx->num_tiles; i++)
         {
             ctx->ti[i].rc.target_bits_left = bits_pic * ctx->ti[i].rc.cost / cost_sum;
