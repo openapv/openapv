@@ -36,6 +36,7 @@
 extern "C"
 {
 #endif
+
 #include <oapv/oapv_exports.h>
 
 /* size of macroblock */
