@@ -31,38 +31,40 @@
 
 #ifndef _OAPV_MD_H_
 #define _OAPV_MD_H_
+
 #include "oapv_def.h"
 /*****************************************************************************
 * Metadata
 *****************************************************************************/
 
-
 /* oapv metadata container magic code */
 #define OAPVM_MAGIC_CODE      0x4150314D /* AP1M */
 
+/* Metadata payload */
+typedef struct oapv_mdp oapv_mdp_t;
+struct oapv_mdp
+{
+    u32                pld_type;                  /* u(8) */
+    u32                pld_size;                  /* u(8) */
+    void* pld_data;
+    oapv_mdp_t* next;
+};
 
+typedef struct oapv_md oapv_md_t;
 struct oapv_md
 {
     int                md_num;
-    u32                metadata_size;                          /* u(32) */
-    oapv_mdp_t*        metadata_payload;
+    u32                md_size;                          /* u(32) */
+    oapv_mdp_t*        md_payload;
 };
 
-struct oapv_md_info_list
+typedef struct oapvm_ctx oapvm_ctx_t;
+struct oapvm_ctx
 {
     u32 magic; // magic code
     oapv_md_t md_arr[OAPV_MAX_NUM_METAS];
     int group_ids[OAPV_MAX_NUM_METAS];
     int num;
-};
-
-/* Metadata payload */
-struct oapv_mdp
-{
-    u32                metadata_payload_type;                  /* u(8) */
-    u32                metadata_payload_size;                  /* u(8) */
-    void* data;
-    oapv_mdp_t* next;
 };
 
 /* Filler metadata */
@@ -115,16 +117,6 @@ struct oapv_md_ud
 {
     u8* undefined_data_payload;
 };
-
-oapv_md_t*  oapv_md_alloc(void);
-int         oapv_md_free_mdp(oapv_mdp_t* mdp);
-oapv_mdp_t* oapv_md_find_mdp(oapv_md_t* md, int mdt);
-oapv_mdp_t* oapv_md_find_usd(oapv_md_t* md, unsigned char* uuid);
-int         oapv_meta_get(oapv_md_t* md, int type, void** buf, int* size, unsigned char* uuid);
-
-void        oapv_md_set_metadata(oapv_md_t* md, int mpt, u32 data_size, void* data);
-int         oapv_md_rm_mdp(oapv_md_t* md, int mdt);
-int         oapv_md_rm_usd(oapv_md_t* md, unsigned char* uuid);
 
 
 #endif

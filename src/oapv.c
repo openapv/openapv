@@ -204,9 +204,6 @@ static void copy_fi_to_finfo(oapv_fi_t* fi, int pbu_type, int group_id, oapv_frm
 #if ENABLE_ENCODER
 ///////////////////////////////////////////////////////////////////////////////
 
-double enc_block(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int log2_block,int c);
-double enc_block_rdo(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int log2_block, int c);
-
 static oapve_ctx_t * enc_id_to_ctx(oapve_t id)
 {
     oapve_ctx_t *ctx;
@@ -281,6 +278,129 @@ static int set_tile_info(oapv_tile_info_t* ti, int pic_w, int pic_h, int tile_w,
     }
 
   return 0;
+}
+
+
+static double enc_block(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int log2_block, int c)
+{
+    int b_w = 1 << log2_block;
+    int b_h = 1 << log2_block;
+    int bit_depth = OAPV_CS_GET_BIT_DEPTH(ctx->imgb->cs);
+    int nnz = 0;
+    int qp = ctx->th[core->tile_idx].tile_qp[c];
+    int qscale = oapv_quant_scale[qp % 6];
+
+    ctx->fn_imgb_to_block(ctx->imgb, c, x, y, b_w, b_h, core->coef);
+    enc_minus_mid_val(core->coef, b_w, b_h, bit_depth);
+
+    oapv_trans(ctx, core->coef, log2_block, log2_block, bit_depth);
+    (ctx->fn_quantb)[0](qp, core->q_matrix_enc[c], core->coef, log2_block, log2_block, qscale, c, bit_depth, c ? 128 : 212);
+
+    int tmp_dc = core->prev_dc[c];
+    core->prev_dc[c] = core->coef[0];
+    core->coef[0] = core->coef[0] - tmp_dc;
+
+    if (ctx->param->is_rec)
+    {
+        ALIGNED_16(s16 coef_temp[OAPV_BLOCK_D]);
+        oapv_mcpy(coef_temp, core->coef, sizeof(s16) * OAPV_BLOCK_D);
+        int dqscale = oapv_tbl_dq_scale[qp % 6];
+        coef_temp[0] = coef_temp[0] + tmp_dc;
+        oapv_itdq_block(ctx->fn_itx, ctx->fn_iquant, core->q_matrix_dec[c], coef_temp, log2_block, log2_block, dqscale, bit_depth, qp);
+
+        oapv_plus_mid_val(coef_temp, b_w, b_h, bit_depth);
+        /*store recon*/
+        ctx->fn_block_to_imgb(coef_temp, c, x, y, (b_w), (b_h), ctx->rec);
+    }
+
+    return 0;
+}
+
+static double enc_block_rdo(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int log2_block, int c)
+{
+    oapv_bs_t* bs = &ctx->bs_thread[core->thread_idx];
+    int b_w = 1 << log2_block;
+    int b_h = 1 << log2_block;
+    int bit_depth = OAPV_CS_GET_BIT_DEPTH(ctx->imgb->cs);
+    int nnz;
+    double cost;
+    int qp = ctx->th[core->tile_idx].tile_qp[c];
+
+    s16 best_coeff[OAPV_BLOCK_D];
+    s16 best_recon[OAPV_BLOCK_D];
+    s16 recon[OAPV_BLOCK_D];
+    s16 coeff[OAPV_BLOCK_D];
+    double best_cost = MAX_COST;
+
+    double lambda = 0.57 * pow(2.0, ((double)(ctx->param->qp - 12)) / 3.0);
+    lambda = c ? lambda / pow(2.0, (-2) / 2.0) : lambda;
+
+    ctx->fn_imgb_to_block(ctx->imgb, c, x, y, b_w, b_h, core->coef);
+    enc_minus_mid_val(core->coef, b_w, b_h, bit_depth);
+    oapv_trans(ctx, core->coef, log2_block, log2_block, bit_depth);
+
+    int qscale = oapv_quant_scale[qp % 6];
+
+    int prev_dc = core->prev_dc[c];
+    int best_prev_dc = 0;
+
+    int stored_dc_ctx = core->prev_dc_ctx[c];
+    int stored_1st_ac_ctx = core->prev_1st_ac_ctx[c];
+
+    int min_val = c ? 154 : 100;
+    int max_val = c ? 154 : 220;
+    int step = 15;
+
+    for (int dz = min_val; dz <= max_val; dz += step)
+    {
+        core->prev_dc_ctx[c] = stored_dc_ctx;
+        core->prev_1st_ac_ctx[c] = stored_1st_ac_ctx;
+
+        oapv_mcpy(coeff, core->coef, sizeof(s16) * ((u64)1 << (log2_block + log2_block)));
+
+        nnz = (ctx->fn_quantb)[0](qp, core->q_matrix_enc[c], coeff, log2_block, log2_block, qscale, c, bit_depth, dz);
+
+        prev_dc = core->prev_dc[c];
+        int tmp_dc = prev_dc;
+        prev_dc = coeff[0];
+        coeff[0] = coeff[0] - tmp_dc;
+
+        bs->is_bin_count = 1;
+        bs->bin_count = 0;
+        oapve_vlc_run_length_cc(ctx, core, bs, coeff, log2_block, log2_block, nnz, c);
+        bs->is_bin_count = 0;
+
+        oapv_mcpy(recon, coeff, sizeof(s16) * ((u64)1 << (log2_block + log2_block)));
+
+        int dqscale = oapv_tbl_dq_scale[qp % 6];
+        recon[0] = recon[0] + tmp_dc;
+
+        oapv_itdq_block(ctx->fn_itx, ctx->fn_iquant, core->q_matrix_dec[c], recon, log2_block, log2_block, dqscale, bit_depth, qp);
+
+        oapv_plus_mid_val(recon, b_w, b_h, bit_depth);
+        s16* org = (s16*)((u8*)ctx->imgb->a[c] + ((y >> (c ? ctx->ch_sft_h : 0)) * ctx->imgb->s[c]) + ((x >> (c ? ctx->ch_sft_w : 0)) * 2));
+        int dist = (int)oapv_ssd(log2_block, log2_block, org, recon, (ctx->imgb->s[c] >> 1), b_w, 10);
+        cost = lambda * bs->bin_count + dist;
+
+        if (cost < best_cost)
+        {
+            best_cost = cost;
+            oapv_mcpy(best_coeff, coeff, sizeof(s16) * ((u64)1 << (log2_block + log2_block)));
+            oapv_mcpy(best_recon, recon, sizeof(s16) * ((u64)1 << (log2_block + log2_block)));
+            best_prev_dc = prev_dc;
+        }
+    }
+    core->prev_dc[c] = best_prev_dc;
+    core->prev_dc_ctx[c] = stored_dc_ctx;
+    core->prev_1st_ac_ctx[c] = stored_1st_ac_ctx;
+    oapv_mcpy(core->coef, best_coeff, sizeof(s16) * ((u64)1 << (log2_block + log2_block)));
+
+    if (ctx->param->is_rec)
+    {
+        /*store recon*/
+        ctx->fn_block_to_imgb(best_recon, c, x, y, (b_w), (b_h), ctx->rec);
+    }
+    return best_cost;
 }
 
 static int enc_init_param(oapve_ctx_t *ctx, oapve_param_t *param)
@@ -427,129 +547,7 @@ ERR:
     return ret;
 }
 
-double enc_block(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int log2_block, int c)
-{
-    int b_w = 1 << log2_block;
-    int b_h = 1 << log2_block;
-    int bit_depth = OAPV_CS_GET_BIT_DEPTH(ctx->imgb->cs);
-    int nnz = 0;
-    int qp = ctx->th[core->tile_idx].tile_qp[c];
-    int qscale = oapv_quant_scale[qp % 6];
-
-    ctx->fn_imgb_to_block(ctx->imgb, c, x, y, b_w, b_h, core->coef);
-    enc_minus_mid_val(core->coef, b_w, b_h, bit_depth);
-
-    oapv_trans(ctx, core->coef, log2_block, log2_block, bit_depth);
-    (ctx->fn_quantb)[0](qp, core->q_matrix_enc[c], core->coef, log2_block, log2_block, qscale, c, bit_depth, c ? 128 : 212);
-
-    int tmp_dc = core->prev_dc[c];
-    core->prev_dc[c] = core->coef[0];
-    core->coef[0] = core->coef[0] - tmp_dc;
-
-    if (ctx->param->is_rec)
-    {
-        ALIGNED_16(s16 coef_temp[OAPV_BLOCK_D]);
-        oapv_mcpy(coef_temp, core->coef, sizeof(s16) * OAPV_BLOCK_D);
-        int dqscale = oapv_tbl_dq_scale[qp % 6];
-        coef_temp[0] = coef_temp[0] + tmp_dc;
-        oapv_itdq_block(ctx->fn_itx, ctx->fn_iquant, core->q_matrix_dec[c], coef_temp, log2_block, log2_block, dqscale, bit_depth, qp);
-
-        oapv_plus_mid_val(coef_temp, b_w, b_h, bit_depth);
-        /*store recon*/
-        ctx->fn_block_to_imgb(coef_temp, c, x, y, (b_w), (b_h), ctx->rec);
-    }
-
-    return 0;
-}
-
-double enc_block_rdo(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int log2_block, int c)
-{
-    oapv_bs_t* bs = &ctx->bs_thread[core->thread_idx];
-    int b_w = 1 << log2_block;
-    int b_h = 1 << log2_block;
-    int bit_depth = OAPV_CS_GET_BIT_DEPTH(ctx->imgb->cs);
-    int nnz;
-    double cost;
-    int qp = ctx->th[core->tile_idx].tile_qp[c];
-
-    s16 best_coeff[OAPV_BLOCK_D];
-    s16 best_recon[OAPV_BLOCK_D];
-    s16 recon[OAPV_BLOCK_D];
-    s16 coeff[OAPV_BLOCK_D];
-    double best_cost = MAX_COST;
-
-    double lambda = 0.57 * pow(2.0, ((double)(ctx->param->qp - 12)) / 3.0);
-    lambda = c ? lambda / pow(2.0, (-2) / 2.0) : lambda;
-
-    ctx->fn_imgb_to_block(ctx->imgb, c, x, y, b_w, b_h, core->coef);
-    enc_minus_mid_val(core->coef, b_w, b_h, bit_depth);
-    oapv_trans(ctx, core->coef, log2_block, log2_block, bit_depth);
-
-    int qscale = oapv_quant_scale[qp % 6];
-
-    int prev_dc = core->prev_dc[c];
-    int best_prev_dc = 0;
-
-    int stored_dc_ctx = core->prev_dc_ctx[c];
-    int stored_1st_ac_ctx = core->prev_1st_ac_ctx[c];
-
-    int min_val = c ? 154 : 100;
-    int max_val = c ? 154 : 220;
-    int step = 15;
-
-    for (int dz = min_val; dz <= max_val; dz += step)
-    {
-        core->prev_dc_ctx[c] = stored_dc_ctx;
-        core->prev_1st_ac_ctx[c] = stored_1st_ac_ctx;
-
-        oapv_mcpy(coeff, core->coef, sizeof(s16) * ((u64)1 << (log2_block + log2_block)));
-
-        nnz = (ctx->fn_quantb)[0](qp, core->q_matrix_enc[c], coeff, log2_block, log2_block, qscale, c, bit_depth, dz);
-
-        prev_dc = core->prev_dc[c];
-        int tmp_dc = prev_dc;
-        prev_dc = coeff[0];
-        coeff[0] = coeff[0] - tmp_dc;
-
-        bs->is_bin_count = 1;
-        bs->bin_count = 0;
-        oapve_vlc_run_length_cc(ctx, core, bs, coeff, log2_block, log2_block, nnz, c);
-        bs->is_bin_count = 0;
-
-        oapv_mcpy(recon, coeff, sizeof(s16) * ((u64)1 << (log2_block + log2_block)));
-
-        int dqscale = oapv_tbl_dq_scale[qp % 6];
-        recon[0] = recon[0] + tmp_dc;
-
-        oapv_itdq_block(ctx->fn_itx, ctx->fn_iquant, core->q_matrix_dec[c], recon, log2_block, log2_block, dqscale, bit_depth, qp);
-
-        oapv_plus_mid_val(recon, b_w, b_h, bit_depth);
-        s16* org = (s16*)((u8*)ctx->imgb->a[c] + ((y >> (c ? ctx->ch_sft_h : 0)) * ctx->imgb->s[c]) + ((x >> (c ? ctx->ch_sft_w : 0)) * 2));
-        int dist = (int)oapv_ssd(log2_block, log2_block, org, recon, (ctx->imgb->s[c] >> 1), b_w, 10);
-        cost = lambda * bs->bin_count + dist;
-
-        if (cost < best_cost)
-        {
-            best_cost = cost;
-            oapv_mcpy(best_coeff, coeff, sizeof(s16) * ((u64)1 << (log2_block + log2_block)));
-            oapv_mcpy(best_recon, recon, sizeof(s16) * ((u64)1 << (log2_block + log2_block)));
-            best_prev_dc = prev_dc;
-        }
-    }
-    core->prev_dc[c] = best_prev_dc;
-    core->prev_dc_ctx[c] = stored_dc_ctx;
-    core->prev_1st_ac_ctx[c] = stored_1st_ac_ctx;
-    oapv_mcpy(core->coef, best_coeff, sizeof(s16) * ((u64)1 << (log2_block + log2_block)));
-
-    if (ctx->param->is_rec)
-    {
-        /*store recon*/
-        ctx->fn_block_to_imgb(best_recon, c, x, y, (b_w), (b_h), ctx->rec);
-    }
-    return best_cost;
-}
-
-int enc_vlc_tile(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int tile_idx, int c)
+static int enc_vlc_tile(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int tile_idx, int c)
 {
     oapv_bs_t* bs = &ctx->bs_thread[core->thread_idx];
     int mb_h, mb_w, b_h, b_w;
@@ -1151,7 +1149,7 @@ int oapve_encode(oapve_t eid, oapv_frms_t* ifrms, oapvm_t mid, oapv_bitb_t* bitb
         }
     }
 
-    oapv_md_info_list_t* md_list = mid;
+    oapvm_ctx_t* md_list = mid;
     if (md_list!=NULL)
     {
         int num_md = md_list->num;
@@ -1361,7 +1359,7 @@ static int dec_finish(oapvd_ctx_t *ctx)
     return OAPV_OK;
 }
 
-int dec_tile_comp(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, int x, int y, int tile_idx, int c)
+static int dec_tile_comp(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, int x, int y, int tile_idx, int c)
 {
     int mb_h, mb_w, b_h, b_w;
     int ret;
