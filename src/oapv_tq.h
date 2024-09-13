@@ -53,9 +53,6 @@ void oapv_tx_pb8b(s16* src, s16* dst, int shift, int line);
 int    oapv_quant_nnz(u8 qp, int q_matrix[OAPV_BLOCK_H*OAPV_BLOCK_W], s16* coef,
     int log2_block_w, int log2_block_h, u16 scale, int ch_type, int bit_depth, int deadzone_offset);
 
-double oapv_quant_cost(u8 qp, double lambda, s16* coef, int log2_block_w, int log2_block_h, u16 scale, int dqscale
-                     , int ch_type, int bit_depth, int * nnz, int log2_block, int deadzone_offset);
-
 ///////////////////////////////////////////////////////////////////////////////
 // end of encoder code
 #endif // ENABLE_ENCODER

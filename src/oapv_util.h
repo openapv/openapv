@@ -88,21 +88,21 @@ static inline int color_format_to_chroma_format_idc(int color_format)
     }
 }
 
-static inline int oapv_get_chroma_sft_w(int chroma_format_idc)
+static inline int get_chroma_sft_w(int chroma_format_idc)
 {
     return ((chroma_format_idc == 0) ? 1 : \
         (chroma_format_idc == 1) ? 1 : \
         (chroma_format_idc == 2)   ? 1 : 0);
 }
 
-static inline int oapv_get_chroma_sft_h(int chroma_format_idc)
+static inline int get_chroma_sft_h(int chroma_format_idc)
 {
     return ((chroma_format_idc == 0) ? 1 : (chroma_format_idc == 1) ? 1 : 0);
 }
-static inline int oapv_get_num_comp(int chroma_format_idc)
+static inline int get_num_comp(int chroma_format_idc)
 {
 
-    return (chroma_format_idc == 4) ? 4 : 3;
+    return (chroma_format_idc == 0) ? 1 : (chroma_format_idc == 4) ? 4 : 3;
 }
 
 static inline void imgb_addref(oapv_imgb_t *imgb)
@@ -128,7 +128,7 @@ typedef struct
 } oapv_md5_t;
 
 /* MD5 Functions */
-int  oapv_imgb_set_md5(oapv_imgb_t *imgb);
+void oapv_imgb_set_md5(oapv_imgb_t *imgb);
 void oapv_block_copy(s16 *src, int src_stride, s16 *dst, int dst_stride, int log2_copy_w, int log2_copy_h);
 
 int  oapve_platform_init_extention(oapve_ctx_t *ctx);

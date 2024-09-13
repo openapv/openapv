@@ -58,12 +58,12 @@ struct oapv_bs
 #if ENABLE_ENCODER
 ///////////////////////////////////////////////////////////////////////////////
 
-static inline bool oapv_bsw_is_align8(oapv_bs_t* bs)
+static inline bool bsw_is_align8(oapv_bs_t* bs)
 {
     return (bool)(!((bs)->leftbits & 0x7));
 }
 
-static inline int oapv_bsw_get_write_byte(oapv_bs_t* bs)
+static inline int bsw_get_write_byte(oapv_bs_t* bs)
 {
     return (int)((u8*)(bs->cur) - (u8*)(bs->beg));
 }
@@ -94,20 +94,20 @@ int oapv_bsw_write(oapv_bs_t * bs, u32 val, int len);
 #if ENABLE_DECODER
 ///////////////////////////////////////////////////////////////////////////////
 /*! is bitstream byte aligned? */
-static bool inline oapv_bsr_is_align8(oapv_bs_t* bs)
+static bool inline bsr_is_align8(oapv_bs_t* bs)
 {
     return ((bs->leftbits & 0x7) == 0) ? true: false;
 }
 
 /* get number of byte consumed */
-static int inline oapv_bsr_get_read_byte(oapv_bs_t* bs)
+static int inline bsr_get_read_byte(oapv_bs_t* bs)
 {
     return ((int)((bs)->cur - (bs)->beg) - ((bs)->leftbits >> 3));
 }
 
-static int inline oapv_bsr_get_remained_byte(oapv_bs_t* bs)
+static int inline bsr_get_remained_byte(oapv_bs_t* bs)
 {
-    return (bs->size - oapv_bsr_get_read_byte(bs));
+    return (bs->size - bsr_get_read_byte(bs));
 }
 
 void oapv_bsr_init(oapv_bs_t * bs, u8 * buf, int size, oapv_bs_fn_flush_t fn_flush);

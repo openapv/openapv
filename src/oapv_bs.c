@@ -39,7 +39,7 @@
 /* number of bytes to be sunk */
 #define BSW_GET_SINK_BYTE(bs)     ((32 - (bs)->leftbits + 7) >> 3)
 
-static int oapv_bsw_flush(oapv_bs_t * bs, int bytes)
+static int bsw_flush(oapv_bs_t * bs, int bytes)
 {
     if (bytes == 0) bytes = BSW_GET_SINK_BYTE(bs);
 
@@ -62,7 +62,7 @@ void oapv_bsw_init(oapv_bs_t * bs, u8 * buf, int size, oapv_bs_fn_flush_t fn_flu
     bs->end = buf + size - 1;
     bs->code = 0;
     bs->leftbits = 32;
-    bs->fn_flush = (fn_flush == NULL ? oapv_bsw_flush : fn_flush);
+    bs->fn_flush = (fn_flush == NULL ? bsw_flush : fn_flush);
 }
 
 void oapv_bsw_deinit(oapv_bs_t * bs)
@@ -269,18 +269,7 @@ static void inline bsr_skip_code(oapv_bs_t* bs, int size)
     }
 }
 
-void oapv_bsr_init(oapv_bs_t * bs, u8 * buf, int size, oapv_bs_fn_flush_t fn_flush)
-{
-    bs->size     = size;
-    bs->cur      = buf;
-    bs->beg      = buf;
-    bs->end      = buf + size - 1;
-    bs->code     = 0;
-    bs->leftbits = 0;
-    bs->fn_flush = (fn_flush == NULL)? oapv_bsr_flush : fn_flush;
-}
-
-int oapv_bsr_flush(oapv_bs_t * bs, int byte)
+static int bsr_flush(oapv_bs_t * bs, int byte)
 {
     int    shift = 24, remained;
     u32 code = 0;
@@ -310,6 +299,19 @@ int oapv_bsr_flush(oapv_bs_t * bs, int byte)
     return 0;
 }
 
+void oapv_bsr_init(oapv_bs_t * bs, u8 * buf, int size, oapv_bs_fn_flush_t fn_flush)
+{
+    bs->size     = size;
+    bs->cur      = buf;
+    bs->beg      = buf;
+    bs->end      = buf + size - 1;
+    bs->code     = 0;
+    bs->leftbits = 0;
+    bs->fn_flush = (fn_flush == NULL)? bsr_flush : fn_flush;
+}
+
+
+
 int oapv_bsr_clz_in_code(u32 code)
 {
     int clz, bits4, shift;
@@ -332,7 +334,7 @@ int oapv_bsr_clz_in_code(u32 code)
 void oapv_bsr_align8(oapv_bs_t* bs)
 {
     u32 t0;
-    while (!oapv_bsr_is_align8(bs)) {
+    while (!bsr_is_align8(bs)) {
         oapv_bsr_read1(bs, &t0);
     }
 }

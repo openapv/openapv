@@ -33,7 +33,6 @@
 
 int oapve_rc_get_tile_cost(oapve_ctx_t* ctx, int tile_idx)
 {
-    int step = 8;
     ALIGNED_16(pel temp[64]);
     int sum = 0;
     ctx->ti[tile_idx].rc.number_pixel = 0;
@@ -143,8 +142,6 @@ double oapve_rc_estimate_pic_lambda(oapve_ctx_t* ctx, double cost)
     int num_pixel = ctx->w * ctx->h;
     for (int c = 1; c < ctx->num_comp; c++)
     {
-        int step_w = c ? 8 << ctx->ch_sft_w : 8;
-        int step_h = c ? 8 << ctx->ch_sft_h : 8;
         num_pixel += (ctx->w * ctx->h) >> (ctx->ch_sft_h + ctx->ch_sft_w);
     }
 
@@ -161,17 +158,15 @@ double oapve_rc_estimate_pic_lambda(oapve_ctx_t* ctx, double cost)
     return est_lambda;
 }
 
-int oapve_rc_estimate_pic_qp(oapve_ctx_t* ctx, double lambda)
+int oapve_rc_estimate_pic_qp(double lambda)
 {
     int qp = (int)(4.2005 * log(lambda) + 13.7122 + 0.5) + OAPV_RC_QP_OFFSET;
     qp = oapv_clip3(MIN_QUANT, MAX_QUANT, qp);
     return qp;
 }
 
-void oapve_rc_get_qp(oapve_ctx_t* ctx, int tile_idx, int pic_qp, int* qp)
+void oapve_rc_get_qp(oapve_ctx_t* ctx, int tile_idx, int tile_qp, int* qp)
 {
-    int   tile_col_idx = tile_idx % ctx->num_tile_cols;
-    int   tile_row_idx = tile_idx / ctx->num_tile_cols;
 
     double   alpha = ctx->rc_param.alpha;
     double   beta = ctx->rc_param.beta;
@@ -182,8 +177,8 @@ void oapve_rc_get_qp(oapve_ctx_t* ctx, int tile_idx, int pic_qp, int* qp)
     double bit_pixel =  (double)ctx->ti[tile_idx].rc.target_bits / (double)ctx->ti[tile_idx].rc.number_pixel;
     double est_lambda = rc_calculate_lambda(alpha, beta, cost_pixel, bit_pixel);
 
-    int min_qp = pic_qp - 2 - OAPV_RC_QP_OFFSET;
-    int max_qp = pic_qp + 2 - OAPV_RC_QP_OFFSET;
+    int min_qp = tile_qp - 2 - OAPV_RC_QP_OFFSET;
+    int max_qp = tile_qp + 2 - OAPV_RC_QP_OFFSET;
 
     double max_lambda = exp(((double)(max_qp + 0.49) - 13.7122) / 4.2005);
     double min_lambda = exp(((double)(min_qp - 0.49) - 13.7122) / 4.2005);
@@ -195,7 +190,6 @@ void oapve_rc_get_qp(oapve_ctx_t* ctx, int tile_idx, int pic_qp, int* qp)
     *qp = oapv_clip3(min_qp, max_qp, *qp);
     *qp += OAPV_RC_QP_OFFSET;
 
-    return;
 }
 
 void oapve_rc_update_after_pic(oapve_ctx_t* ctx, double cost)

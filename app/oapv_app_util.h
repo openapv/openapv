@@ -441,11 +441,6 @@ static int imgb_write(char * fname, oapv_imgb_t * imgb)
 
     int chroma_format = OAPV_CS_GET_FORMAT(imgb->cs);
     int bit_depth = OAPV_CS_GET_BIT_DEPTH(imgb->cs);
-    int w_shift = (chroma_format == OAPV_CF_YCBCR420) || (chroma_format == OAPV_CF_YCBCR422) ? 1 : 0;
-    int h_shift = chroma_format == OAPV_CF_YCBCR420 ? 1 : 0;
-
-    int w = imgb->w[0];
-    int h = imgb->h[0];
 
     fp = fopen(fname, "ab");
     if(fp == NULL)
