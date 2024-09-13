@@ -275,12 +275,12 @@ static void md5_finish(oapv_md5_t *md5, u8 digest[16])
 static unsigned char uuid_frm_hash[16] =
 { 0xf8, 0x72, 0x1b, 0x3e, 0xcd, 0xee, 0x47, 0x21, 0x98, 0x0d, 0x9b, 0x9e, 0x39, 0x20, 0x28, 0x49 };
 
-int oapv_imgb_set_md5(oapv_imgb_t *imgb)
+void oapv_imgb_set_md5(oapv_imgb_t *imgb)
 {
 
     oapv_md5_t md5[N_C];
     int i, j;
-    oapv_assert_rv(imgb != NULL, OAPV_ERR);
+    oapv_assert(imgb != NULL);
     memset(imgb->hash, 0, sizeof(imgb->hash));
 
     for (i = 0; i < imgb->np; i++)
@@ -295,18 +295,13 @@ int oapv_imgb_set_md5(oapv_imgb_t *imgb)
         md5_finish(&md5[i], imgb->hash[i]);
     }
 
-    return OAPV_OK;
 }
 
 int oapv_set_md5_pld(oapvm_t mid, int group_id, oapv_imgb_t *rec)
 {
-    if (OAPV_FAILED(oapv_imgb_set_md5(rec))) {
-        return OAPV_ERR;
-    }
+    oapv_imgb_set_md5(rec);
     u8* mdp_data = oapv_malloc((16 * rec->np) + 16);
-    if (mdp_data == NULL) {
-        return OAPV_ERR;
-    }
+    oapv_assert_rv(mdp_data != NULL, OAPV_ERR_OUT_OF_MEMORY)
     memcpy(mdp_data, uuid_frm_hash, 16);
     for (int i=0; i < rec->np; i++) {
         memcpy(mdp_data + ((i + 1) * 16), rec->hash[i], 16);

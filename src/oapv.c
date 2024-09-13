@@ -51,8 +51,8 @@ static void imgb_to_block(oapv_imgb_t *imgb, int c, int x_l, int y_l, int w_l, i
     else
     {
         u8 cfi = color_format_to_chroma_format_idc(OAPV_CS_GET_FORMAT(imgb->cs));
-        sft_hor = oapv_get_chroma_sft_w(cfi);
-        sft_ver = oapv_get_chroma_sft_h(cfi);
+        sft_hor = get_chroma_sft_w(cfi);
+        sft_ver = get_chroma_sft_h(cfi);
     }
 
     src = ((u8 *)imgb->a[c]) + ((y_l >> sft_ver) * imgb->s[c]) + ((x_l * bd) >> sft_hor);
@@ -72,7 +72,6 @@ static void imgb_to_block_p210(oapv_imgb_t* imgb, int c, int x_l, int y_l, int w
     u16* src, * dst;
     int sft_hor, sft_ver;
     int bd = OAPV_CS_GET_BYTE_DEPTH(imgb->cs);
-    int format = OAPV_CS_GET_FORMAT(imgb->cs);
     int size_scale = 1;
     int tc = c;
 
@@ -83,8 +82,8 @@ static void imgb_to_block_p210(oapv_imgb_t* imgb, int c, int x_l, int y_l, int w
     else
     {
         u8 cfi = color_format_to_chroma_format_idc(OAPV_CS_GET_FORMAT(imgb->cs));
-        sft_hor = oapv_get_chroma_sft_w(cfi);
-        sft_ver = oapv_get_chroma_sft_h(cfi);
+        sft_hor = get_chroma_sft_w(cfi);
+        sft_ver = get_chroma_sft_h(cfi);
         size_scale = 2;
         tc = 1;
     }
@@ -116,8 +115,8 @@ static void block_to_imgb(s16 *block, int c, int x_l, int y_l, int w_l, int h_l,
     else
     {
         u8 cfi = color_format_to_chroma_format_idc(OAPV_CS_GET_FORMAT(imgb->cs));
-        sft_hor = oapv_get_chroma_sft_w(cfi);
-        sft_ver = oapv_get_chroma_sft_h(cfi);
+        sft_hor = get_chroma_sft_w(cfi);
+        sft_ver = get_chroma_sft_h(cfi);
     }
 
     src = (u8 *)block;
@@ -146,8 +145,8 @@ static void block_to_imgb_p210(s16 *block, int c, int x_l, int y_l, int w_l, int
     else
     {
         u8 cfi = color_format_to_chroma_format_idc(OAPV_CS_GET_FORMAT(imgb->cs));
-        sft_hor = oapv_get_chroma_sft_w(cfi);
-        sft_ver = oapv_get_chroma_sft_h(cfi);
+        sft_hor = get_chroma_sft_w(cfi);
+        sft_ver = get_chroma_sft_h(cfi);
         size_scale = 2;
         tc = 1;
     }
@@ -167,7 +166,7 @@ static void block_to_imgb_p210(s16 *block, int c, int x_l, int y_l, int w_l, int
     }
 }
 
-static void oapv_plus_mid_val(s16* coef, int b_w, int b_h, int bit_depth)
+static void plus_mid_val(s16* coef, int b_w, int b_h, int bit_depth)
 {
   int mid_val = 1 << (bit_depth - 1);
   for (int i = 0; i < b_h * b_w; i++)
@@ -227,7 +226,7 @@ static void enc_ctx_free(oapve_ctx_t *ctx)
     oapv_mfree_fast(ctx);
 }
 
-static oapve_core_t * enc_core_alloc(int chroma_format_idc)
+static oapve_core_t * enc_core_alloc()
 {
     oapve_core_t * core;
     core = (oapve_core_t *)oapv_malloc_fast(sizeof(oapve_core_t));
@@ -286,7 +285,6 @@ static double enc_block(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int 
     int b_w = 1 << log2_block;
     int b_h = 1 << log2_block;
     int bit_depth = OAPV_CS_GET_BIT_DEPTH(ctx->imgb->cs);
-    int nnz = 0;
     int qp = ctx->th[core->tile_idx].tile_qp[c];
     int qscale = oapv_quant_scale[qp % 6];
 
@@ -308,7 +306,7 @@ static double enc_block(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int 
         coef_temp[0] = coef_temp[0] + tmp_dc;
         oapv_itdq_block(ctx->fn_itx, ctx->fn_iquant, core->q_matrix_dec[c], coef_temp, log2_block, log2_block, dqscale, bit_depth, qp);
 
-        oapv_plus_mid_val(coef_temp, b_w, b_h, bit_depth);
+        plus_mid_val(coef_temp, b_w, b_h, bit_depth);
         /*store recon*/
         ctx->fn_block_to_imgb(coef_temp, c, x, y, (b_w), (b_h), ctx->rec);
     }
@@ -377,7 +375,7 @@ static double enc_block_rdo(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, 
 
         oapv_itdq_block(ctx->fn_itx, ctx->fn_iquant, core->q_matrix_dec[c], recon, log2_block, log2_block, dqscale, bit_depth, qp);
 
-        oapv_plus_mid_val(recon, b_w, b_h, bit_depth);
+        plus_mid_val(recon, b_w, b_h, bit_depth);
         s16* org = (s16*)((u8*)ctx->imgb->a[c] + ((y >> (c ? ctx->ch_sft_h : 0)) * ctx->imgb->s[c]) + ((x >> (c ? ctx->ch_sft_w : 0)) * 2));
         int dist = (int)oapv_ssd(log2_block, log2_block, org, recon, (ctx->imgb->s[c] >> 1), b_w, 10);
         cost = lambda * bs->bin_count + dist;
@@ -414,7 +412,7 @@ static int enc_init_param(oapve_ctx_t *ctx, oapve_param_t *param)
     ctx->qp[V_C] = param->qp + param->qp_cr_offset;
     ctx->qp[T_C] = param->qp;
 
-    ctx->num_comp = oapv_get_num_comp(param->csp);
+    ctx->num_comp = get_num_comp(param->csp);
 
     if (param->preset == OAPV_PRESET_SLOW ||
         param->preset == OAPV_PRESET_PLACEBO) {
@@ -498,7 +496,7 @@ static int enc_ready(oapve_ctx_t *ctx)
 
     for (int i = 0; i < ctx->cdesc.threads; i++)
     {
-        core = enc_core_alloc(ctx->cfi);
+        core = enc_core_alloc();
         oapv_assert_gv(core != NULL, ret, OAPV_ERR_OUT_OF_MEMORY, ERR);
         ctx->core[i] = core;
 
@@ -553,7 +551,7 @@ static int enc_vlc_tile(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int 
     int mb_h, mb_w, b_h, b_w;
 
     u8* bs_cur = oapv_bsw_sink(bs);
-    oapv_assert_rv(oapv_bsw_is_align8(bs), OAPV_ERR_MALFORMED_BITSTREAM);
+    oapv_assert_rv(bsw_is_align8(bs), OAPV_ERR_MALFORMED_BITSTREAM);
 
     mb_h = ctx->mb >> (c ? ctx->ch_sft_h : 0);
     mb_w = ctx->mb >> (c ? ctx->ch_sft_w : 0);
@@ -601,7 +599,7 @@ static int enc_vlc_tile(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int 
     }
 
     /* byte align */
-    while (!oapv_bsw_is_align8(bs))
+    while (!bsw_is_align8(bs))
     {
         oapv_bsw_write1(bs, 0);
     }
@@ -786,7 +784,6 @@ static void enc_img_pad_p210(oapve_ctx_t* ctx, oapv_imgb_t* imgb)
         }
     }
 
-    return;
 }
 static void enc_img_pad(oapve_ctx_t* ctx, oapv_imgb_t* imgb)
 {
@@ -841,7 +838,6 @@ static void enc_img_pad(oapve_ctx_t* ctx, oapv_imgb_t* imgb)
     }
   }
 
-    return;
 }
 
 static int enc_prepare(oapve_ctx_t *ctx, oapv_imgb_t *imgb, oapv_bitb_t *bitb, oapv_imgb_t *rec)
@@ -849,9 +845,9 @@ static int enc_prepare(oapve_ctx_t *ctx, oapv_imgb_t *imgb, oapv_bitb_t *bitb, o
     oapv_assert_rv(ctx->qp[Y_C] >= MIN_QUANT && ctx->qp[Y_C] <= MAX_QUANT, OAPV_ERR_INVALID_ARGUMENT);
 
     ctx->cfi= color_format_to_chroma_format_idc(OAPV_CS_GET_FORMAT(imgb->cs));
-    ctx->num_comp = oapv_get_num_comp(ctx->cfi);
-    ctx->ch_sft_w = oapv_get_chroma_sft_w(ctx->cfi);
-    ctx->ch_sft_h = oapv_get_chroma_sft_h(ctx->cfi);
+    ctx->num_comp = get_num_comp(ctx->cfi);
+    ctx->ch_sft_w = get_chroma_sft_w(ctx->cfi);
+    ctx->ch_sft_h = get_chroma_sft_h(ctx->cfi);
 
     if (OAPV_CS_GET_FORMAT(imgb->cs) == OAPV_CF_PLANAR2)
     {
@@ -907,12 +903,12 @@ static int enc_prepare(oapve_ctx_t *ctx, oapv_imgb_t *imgb, oapv_bitb_t *bitb, o
     return OAPV_OK;
 }
 
-static int enc_finish(oapve_ctx_t *ctx, oapv_bitb_t *bitb, oapve_stat_t *stat)
+static int enc_finish(oapve_ctx_t *ctx, oapve_stat_t *stat)
 {
     /* de-init BSW */
     oapv_bsw_deinit(&ctx->bs);
 
-    stat->write = oapv_bsw_get_write_byte(&ctx->bs);
+    stat->write = bsw_get_write_byte(&ctx->bs);
 
     imgb_release(ctx->imgb);
     if (ctx->rec)
@@ -923,7 +919,7 @@ static int enc_finish(oapve_ctx_t *ctx, oapv_bitb_t *bitb, oapve_stat_t *stat)
     return OAPV_OK;
 }
 
-static int enc_frame(oapve_ctx_t *ctx, oapv_imgb_t *imgb, oapv_bitb_t *bitb, oapve_stat_t *stat, oapv_imgb_t *rec)
+static int enc_frame(oapve_ctx_t *ctx)
 {
     oapv_bs_t *bs = &ctx->bs;
     //u8 *bs_cur_frame_size; // TODO : remove
@@ -963,7 +959,7 @@ static int enc_frame(oapve_ctx_t *ctx, oapv_imgb_t *imgb, oapv_bitb_t *bitb, oap
         }
 
         ctx->rc_param.lambda = oapve_rc_estimate_pic_lambda(ctx, cost_sum);
-        ctx->rc_param.qp = oapve_rc_estimate_pic_qp(ctx, ctx->rc_param.lambda);
+        ctx->rc_param.qp = oapve_rc_estimate_pic_qp(ctx->rc_param.lambda);
         for (int c = 0; c < ctx->num_comp; c++)
         {
             ctx->qp[c] = ctx->rc_param.qp;
@@ -1109,8 +1105,6 @@ int oapve_encode(oapve_t eid, oapv_frms_t* ifrms, oapvm_t mid, oapv_bitb_t* bitb
     u8* bs_pos_pbu_beg;
     oapv_bsw_write(bs, 0, 32);
 
-    oapv_bs_t* bs_pos_fi = NULL;
-
     for (i = 0; i < ifrms->num_frms; i++)
     {
         frm = &ifrms->frm[i];
@@ -1130,7 +1124,7 @@ int oapve_encode(oapve_t eid, oapv_frms_t* ifrms, oapvm_t mid, oapv_bitb_t* bitb
         oapve_vlc_pbu_size(bs, 0);
         oapve_vlc_pbu_header(bs, frm->pbu_type, frm->group_id);
         // encode a frame
-        ret = enc_frame(ctx, frm->imgb, bitb, stat, rfrms->frm[i].imgb);
+        ret = enc_frame(ctx);
         oapv_assert_rv(ret == OAPV_OK, ret);
 
         int pbu_size = ((u8*)oapv_bsw_sink(bs)) - bs_pos_pbu_beg - 4;
@@ -1169,7 +1163,7 @@ int oapve_encode(oapve_t eid, oapv_frms_t* ifrms, oapvm_t mid, oapv_bitb_t* bitb
     oapv_bsw_write_direct(bs_pos_au_size, au_size, 32); /* u(32) */
 
     // finishing of encoding a frame
-    ret = enc_finish(ctx, bitb, stat);
+    ret = enc_finish(ctx, stat);
     oapv_assert_rv(ret == OAPV_OK, ret);
 
     return OAPV_OK;
@@ -1310,9 +1304,7 @@ static void dec_core_free(oapvd_core_t *core)
 
 static int dec_block(oapvd_ctx_t* ctx, oapvd_core_t* core, int x, int y, int log2_block_w, int log2_block_h, int c)
 {
-    oapv_bs_t* bs = &core->bs;
     int bit_depth = OAPV_CS_GET_BIT_DEPTH(ctx->imgb->cs);
-    int byte_depth = OAPV_CS_GET_BYTE_DEPTH(ctx->imgb->cs);
 
     int b_w = 1 << log2_block_w;
     int b_h = 1 << log2_block_h;
@@ -1328,7 +1320,7 @@ static int dec_block(oapvd_ctx_t* ctx, oapvd_core_t* core, int x, int y, int log
 
     oapv_itrans(ctx->fn_itx, core->coef, 3, 3, bit_depth);
 
-    oapv_plus_mid_val(core->coef, b_w, b_h, bit_depth);
+    plus_mid_val(core->coef, b_w, b_h, bit_depth);
     // store to output
     ctx->fn_block_to_imgb(core->coef, c, x, y, b_w, b_h, ctx->imgb);
 
@@ -1712,9 +1704,9 @@ int oapvd_decode(oapvd_t did, oapv_bitb_t *bitb, oapv_frms_t* ofrms, oapvm_t mid
             ret = oapvd_vlc_frame_header(bs, &ctx->fh);
             oapv_assert_g(OAPV_SUCCEEDED(ret), ERR);
             ctx->cfi = ctx->fh.fi.chroma_format_idc;
-            ctx->num_comp = oapv_get_num_comp(ctx->cfi);
-            ctx->ch_sft_w = oapv_get_chroma_sft_w(ctx->cfi);
-            ctx->ch_sft_h = oapv_get_chroma_sft_h(ctx->cfi);
+            ctx->num_comp = get_num_comp(ctx->cfi);
+            ctx->ch_sft_w = get_chroma_sft_w(ctx->cfi);
+            ctx->ch_sft_h = get_chroma_sft_h(ctx->cfi);
 
             ret = dec_init_frame(ctx);
             oapv_assert_g(OAPV_SUCCEEDED(ret), ERR);
@@ -1760,12 +1752,12 @@ int oapvd_decode(oapvd_t did, oapv_bitb_t *bitb, oapv_frms_t* ofrms, oapvm_t mid
                     ret = res;
                 }
             }
-            stat->read += oapv_bsr_get_read_byte(&ctx->bs);
+            stat->read += bsr_get_read_byte(&ctx->bs);
 
             copy_fi_to_finfo(&ctx->fh.fi, pbuh.pbu_type, pbuh.group_id, &stat->aui.frm_info[frame_cnt]);
             if (ret == OAPV_OK && ctx->use_frm_hash)
             {
-                ret = oapv_imgb_set_md5(ctx->imgb);
+                oapv_imgb_set_md5(ctx->imgb);
             }
             dec_finish(ctx); // FIX-ME
             ofrms->frm[frame_cnt].pbu_type = pbuh.pbu_type;
@@ -1776,7 +1768,7 @@ int oapvd_decode(oapvd_t did, oapv_bitb_t *bitb, oapv_frms_t* ofrms, oapvm_t mid
         else if (pbuh.pbu_type == OAPV_PBU_TYPE_METADATA)
         {
             ret = oapvd_vlc_metadata(bs, pbu_size, mid, pbuh.group_id);
-            stat->read += oapv_bsr_get_read_byte(&ctx->bs);
+            stat->read += bsr_get_read_byte(&ctx->bs);
         }
         else if (pbuh.pbu_type == OAPV_PBU_TYPE_FILLER)
         {
@@ -1784,9 +1776,10 @@ int oapvd_decode(oapvd_t did, oapv_bitb_t *bitb, oapv_frms_t* ofrms, oapvm_t mid
         }
         curpos += (pbu_size + 4);
         remain -= (pbu_size + 4);
+        oapv_assert_g(OAPV_SUCCEEDED(ret), ERR);
     }
     stat->aui.num_frms = frame_cnt;
-    oapv_assert_rv(ofrms->num_frms == frame_cnt, OAPV_ERR);
+    oapv_assert_rv(ofrms->num_frms == frame_cnt, OAPV_ERR_MALFORMED_BITSTREAM);
     return ret;
 
 ERR:
@@ -1796,7 +1789,6 @@ ERR:
 int oapvd_config(oapvd_t did, int cfg, void *buf, int *size)
 {
     oapvd_ctx_t *ctx;
-    int t0 = 0;
 
     ctx = dec_id_to_ctx(did);
     oapv_assert_rv(ctx, OAPV_ERR_INVALID_ARGUMENT);

@@ -184,7 +184,7 @@ static int args_get_arg(ARGS_OPT * ops, int idx, char * result)
 static int args_parse_int_x_int(char * str, int * num0, int * num1)
 {
     char str0_t[64];
-    int i, cnt0, cnt1;
+    int i, cnt0 = 0, cnt1;
     char * str0, *str1 = NULL;
 
     str0 = str;
@@ -494,7 +494,7 @@ static int args_parse(ARGS_PARSER * args, int argc, const char* argv[],
 
 static int args_get_help(ARGS_PARSER * args, int idx, char * help)
 {
-    int optional = 0;
+    int optional;
     char vtype[32];
     ARGS_OPT * o = args->opts + idx;
     char default_value[256] = { 0 };

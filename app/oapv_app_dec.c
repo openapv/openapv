@@ -145,7 +145,7 @@ static void print_usage(const char** argv)
         goto ERR;
 
     logv2("Syntax: \n");
-    logv2("  %s -i 'input-file' [ options ] \n\n", "oapv_app_dec");
+    logv2("  %s -i 'input-file' [ options ] \n\n", argv[0]);
 
     logv2("Options:\n");
     logv2("  --help\n    : list options\n");
@@ -228,7 +228,7 @@ static int set_extra_config(oapvd_t id, ARGS_VAR* args_vars)
     return 0;
 }
 
-static int write_dec_img(oapvd_t id, char* fname, oapv_imgb_t* img, int flag_y4m)
+static int write_dec_img(char* fname, oapv_imgb_t* img, int flag_y4m)
 {
     if(flag_y4m) {
         if(write_y4m_frame_header(fname))
@@ -566,7 +566,7 @@ int main(int argc, const char** argv)
                             goto END;
                         }
                     }
-                    write_dec_img(did, args_var->fname_out, imgb_o, is_y4m);
+                    write_dec_img(args_var->fname_out, imgb_o, is_y4m);
                 }
                 frm_cnt[i]++;
             }

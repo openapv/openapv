@@ -41,8 +41,8 @@
 
 int oapve_rc_get_tile_cost(oapve_ctx_t* ctx, int tile_idx);
 double oapve_rc_estimate_pic_lambda(oapve_ctx_t* ctx, double cost);
-int oapve_rc_estimate_pic_qp(oapve_ctx_t* ctx, double lambda);
-void oapve_rc_get_qp(oapve_ctx_t* ctx, int tile_idx, int clip_qp, int* est_qp);
+int oapve_rc_estimate_pic_qp(double lambda);
+void oapve_rc_get_qp(oapve_ctx_t* ctx, int tile_idx, int tile_qp, int* qp);
 void oapve_rc_update_after_pic(oapve_ctx_t* ctx, double cost);
 int oapve_rc_get_tile_cost_thread(oapve_ctx_t* ctx, u64* sum);
 

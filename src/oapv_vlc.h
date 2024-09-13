@@ -52,7 +52,7 @@ int  oapve_vlc_dc_coeff(oapve_ctx_t* ctx, oapve_core_t* core, oapv_bs_t* bs, int
 
 int  oapvd_vlc_au_size(oapv_bs_t* bs, u32* size);
 int  oapvd_vlc_pbu_size(oapv_bs_t* bs, u32* size);
-int  oapvd_vlc_pbu_header(oapv_bs_t* bs, oapv_pbuh_t* pbu);
+int  oapvd_vlc_pbu_header(oapv_bs_t* bs, oapv_pbuh_t* pbuh);
 int  oapvd_vlc_au_info(oapv_bs_t* bs, oapv_aui_t* aui);
 
 int  oapvd_vlc_frame_size(oapv_bs_t* bs);

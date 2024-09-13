@@ -112,10 +112,7 @@ int oapv_quant_nnz(u8 qp, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W], s16* coef, 
     int log2_size = (log2_block_w + log2_block_h) >> 1;
     tr_shift = MAX_TX_DYNAMIC_RANGE - bit_depth - log2_size;
     shift = QUANT_SHIFT + tr_shift + (qp / 6);
-    int bd_shift = 5 - bit_depth - log2_size;
     offset = deadzone_offset << (shift - 9);
-    int mod = (1 << log2_block_w) - 1;
-    s32 scale_used = (s32)scale;
     int pixels = (1 << (log2_block_w + log2_block_h));
     for (i = 0; i < pixels; i++)
     {

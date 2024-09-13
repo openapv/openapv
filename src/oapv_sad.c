@@ -104,7 +104,6 @@ s64 oapv_ssd_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2, i
     s16 * s2;
     int     i, j, diff;
     s64   ssd;
-    const int shift = (bit_depth - 8) << 1;
 
     s1 = (s16 *)src1;
     s2 = (s16 *)src2;

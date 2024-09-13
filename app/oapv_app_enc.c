@@ -215,7 +215,6 @@ static ARGS_VAR* args_init_vars(ARGS_PARSER* args, oapve_param_t* param)
     ARGS_VAR* vars;
 
     opts = args->opts;
-    opts = args->opts;
     vars = malloc(sizeof(ARGS_VAR));
     assert_rv(vars != NULL, NULL);
     memset(vars, 0, sizeof(ARGS_VAR));
@@ -285,7 +284,7 @@ static void print_usage(const char** argv)
         goto ERR;
 
     logv2("Syntax: \n");
-    logv2("  %s -i 'input-file' [ options ] \n\n", "oapv_app_enc");
+    logv2("  %s -i 'input-file' [ options ] \n\n", argv[0]);
 
     logv2("Options:\n");
     logv2("  --help\n    : list options\n");
@@ -382,7 +381,7 @@ void print_stat_frame(int fnum, int gid, double* psnr, int bitrate, oapv_clk_t c
 
 static int kbps_str_to_int(char* str)
 {
-    int kbps = 0;
+    int kbps;
     if(strchr(str, 'K') || strchr(str, 'k')) {
         char* tmp = strtok(str, "Kk ");
         kbps      = (int)(atof(tmp));
@@ -422,8 +421,8 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
         while(len_cnt < len_y && cnt < OAPV_BLOCK_D) {
             sscanf(tmp, "%d", &param->q_matrix_y[cnt]);
             if(param->q_matrix_y[cnt] < 1 || param->q_matrix_y[cnt] > 256) {
-                logerr("input value of q_matrix_y is valid\n");
-                return OAPV_ERR;
+                logerr("input value of q_matrix_y is invalid\n");
+                return -1;
             }
             len_cnt += (int)log10(param->q_matrix_y[cnt]) + 2;
             tmp = vars->q_matrix_y + len_cnt;
@@ -431,7 +430,7 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
         }
         if(cnt < OAPV_BLOCK_D) {
             logerr("input number of q_matrix_y is not enough\n");
-            return OAPV_ERR;
+            return -1;
         }
     }
 
@@ -444,8 +443,8 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
         while(len_cnt < len_u && cnt < OAPV_BLOCK_D) {
             sscanf(tmp, "%d", &param->q_matrix_u[cnt]);
             if(param->q_matrix_u[cnt] < 1 || param->q_matrix_u[cnt] > 256) {
-                logerr("input value of q_matrix_u is valid\n");
-                return OAPV_ERR;
+                logerr("input value of q_matrix_u is invalid\n");
+                return -1;
             }
             len_cnt += (int)log10(param->q_matrix_u[cnt]) + 2;
             tmp = vars->q_matrix_u + len_cnt;
@@ -453,7 +452,7 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
         }
         if(cnt < OAPV_BLOCK_D) {
             logerr("input number of q_matrix_u is not enough\n");
-            return OAPV_ERR;
+            return -1;
         }
     }
 
@@ -466,8 +465,8 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
         while(len_cnt < len_v && cnt < OAPV_BLOCK_D) {
             sscanf(tmp, "%d", &param->q_matrix_v[cnt]);
             if(param->q_matrix_v[cnt] < 1 || param->q_matrix_v[cnt] > 256) {
-                logerr("input value of q_matrix_v is valid\n");
-                return OAPV_ERR;
+                logerr("input value of q_matrix_v is invalid\n");
+                return -1;
             }
             len_cnt += (int)log10(param->q_matrix_v[cnt]) + 2;
             tmp = vars->q_matrix_v + len_cnt;
@@ -475,7 +474,7 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
         }
         if(cnt < OAPV_BLOCK_D) {
             logerr("input number of q_matrix_v is not enough\n");
-            return OAPV_ERR;
+            return -1;
         }
     }
 
@@ -541,7 +540,7 @@ int main(int argc, const char** argv)
         0,
     };
     int       encod_frames = 0;
-    int       is_y4m       = 0;
+    int       is_y4m;
     Y4M_INFO  y4m;
     char      fname_inp[256], fname_out[256], fname_rec[256];
     int       is_out = 0, is_rec = 0;
@@ -618,7 +617,7 @@ int main(int argc, const char** argv)
             ret = -1;
             goto ERR;
         }
-        y4m_update_param(args, &y4m, param);
+        y4m_update_param(args, &y4m);
         cfmt = y4m.color_format;
     }
     else {
@@ -834,7 +833,7 @@ int main(int argc, const char** argv)
 
                 /* calculate PSNR */
                 if(op_verbose == VERBOSE_FRAME) {
-                    measure_psnr(ifrms.frm[i].imgb, rfrms.frm[i].imgb, psnr, args_var->input_depth);
+                    measure_psnr(ifrms.frm[i].imgb, rfrms.frm[i].imgb, psnr, OAPV_CS_GET_BIT_DEPTH(ifrms.frm[i].imgb->cs));
                     print_stat_frame(pic_cnt, stat.aui.frm_info[FRM_IDX].group_id, psnr, (stat.frm_size[FRM_IDX]) << 3, clk_end, (pic_cnt == 0));
                     for(i = 0; i < (cfmt == OAPV_CF_YCBCR4444 ? 4 : 3); i++)
                         psnr_avg[i] += psnr[i];

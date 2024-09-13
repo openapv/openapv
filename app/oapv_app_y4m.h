@@ -28,6 +28,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _OAPV_APP_Y4M_H_
+#define _OAPV_APP_Y4M_H_
 
 typedef struct _Y4M_PARAMS
 {
@@ -211,7 +213,7 @@ int y4m_header_parser(FILE * ip_y4m, Y4M_INFO * y4m)
     return 0;
 }
 
-static void y4m_update_param(ARGS_PARSER * args, Y4M_INFO * y4m, oapve_param_t * param)
+static void y4m_update_param(ARGS_PARSER * args, Y4M_INFO * y4m)
 {
     args->set_int(args, "width", y4m->w);
     args->set_int(args, "height", y4m->h);
@@ -295,3 +297,4 @@ static int write_y4m_frame_header(char * fname)
 
 }
 
+#endif /* _OAPV_APP_Y4M_H_ */
