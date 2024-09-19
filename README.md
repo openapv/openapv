@@ -33,8 +33,8 @@ The APV codec standard has the following features:
 ### Related specification
 - APV Codec (bitstream): [https://datatracker.ietf.org/doc/draft-lim-apv/](https://datatracker.ietf.org/doc/draft-lim-apv/)
   - Scope of OpenAPV project
-- APV RTP payload format: [https://datatracker.ietf.org/doc/draft-lim-rtp-apv/](https://datatracker.ietf.org/doc/draft-lim-rtp-apv/)
 - APV ISO based media file format: [APV-ISOBMFF](/readme/apv_isobmff.md)
+- APV RTP payload format: [https://datatracker.ietf.org/doc/draft-lim-rtp-apv/](https://datatracker.ietf.org/doc/draft-lim-rtp-apv/)
 
 ## How to build
 - Build Requirements
