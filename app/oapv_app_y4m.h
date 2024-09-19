@@ -35,7 +35,8 @@ typedef struct _Y4M_PARAMS
 {
     int w;
     int h;
-    int fps;
+    int fps_num;
+    int fps_den;
     int color_format;
     int bit_depth;
 }Y4M_INFO;
@@ -97,7 +98,8 @@ static int y4m_parse_tags(Y4M_INFO * y4m, char * tags)
         case 'F':
         {
             if (sscanf(p + 1, "%d:%d", &fps_n, &fps_d) != 2) return OAPV_ERR;
-             y4m->fps = (int)((fps_n /(double)fps_d) + 0.5);
+             y4m->fps_num = fps_n;
+             y4m->fps_den = fps_d;
             break;
         }
         case 'I':
@@ -217,7 +219,9 @@ static void y4m_update_param(ARGS_PARSER * args, Y4M_INFO * y4m)
 {
     args->set_int(args, "width", y4m->w);
     args->set_int(args, "height", y4m->h);
-    args->set_int(args, "fps", y4m->fps);
+    char tmp_fps[256];
+    sprintf(tmp_fps, "%d/%d", y4m->fps_num, y4m->fps_den);
+    args->set_str(args, "fps", tmp_fps);
     args->set_int(args, "input-depth", y4m->bit_depth);
 }
 

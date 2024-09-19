@@ -81,8 +81,8 @@ static const ARGS_OPT enc_args_opts[] = {
         "QP value (0~51)"
     },
     {
-        'z',  "fps", ARGS_VAL_TYPE_INTEGER | ARGS_VAL_TYPE_MANDATORY, 0, NULL,
-        "frame rate (frame per second)"
+        'z',  "fps", ARGS_VAL_TYPE_STRING | ARGS_VAL_TYPE_MANDATORY, 0, NULL,
+        "frame rate (frame per second))"
     },
     {
         'm',  "threads", ARGS_VAL_TYPE_INTEGER, 0, NULL,
@@ -202,6 +202,7 @@ typedef struct {
     char           level[32];
     int            band;
     char           bitrate[64];
+    char           fps[256];
     char           q_matrix_y[512];
     char           q_matrix_u[512];
     char           q_matrix_v[512];
@@ -241,6 +242,8 @@ static ARGS_VAR* args_init_vars(ARGS_PARSER* args, oapve_param_t* param)
     args_set_variable_by_key_long(opts, "band", &vars->band);
     vars->band = 2; /* default */
     args_set_variable_by_key_long(opts, "bitrate", vars->bitrate);
+    args_set_variable_by_key_long(opts, "fps", vars->fps);
+    strncpy(vars->fps, "60", sizeof(vars->fps) - 1);
     args_set_variable_by_key_long(opts, "q-matrix-y", vars->q_matrix_y);
     strncpy(vars->q_matrix_y, "", sizeof(vars->q_matrix_y) - 1);
     args_set_variable_by_key_long(opts, "q-matrix-u", vars->q_matrix_u);
@@ -255,7 +258,6 @@ static ARGS_VAR* args_init_vars(ARGS_PARSER* args, oapve_param_t* param)
     ARGS_SET_PARAM_VAR_KEY(opts, param, w);
     ARGS_SET_PARAM_VAR_KEY(opts, param, h);
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, qp);
-    ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, fps);
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, preset);
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, rc_type);
     ARGS_SET_PARAM_VAR_KEY_LONG(opts, param, use_filler);
@@ -349,7 +351,7 @@ static void print_config(ARGS_VAR* vars, oapve_param_t* param)
     logv2("\tprofile                  = %s\n", vars->profile);
     logv2("\twidth                    = %d\n", param->w);
     logv2("\theight                   = %d\n", param->h);
-    logv2("\tFPS                      = %d\n", param->fps);
+    logv2("\tFPS                      = %.2f\n", (float)param->fps_num / param->fps_den);
     logv2("\tQP                       = %d\n", param->qp);
     logv2("\tframes                   = %d\n", vars->frames);
     logv2("\trate-control type        = %s\n", (param->rc_type == OAPV_RC_ABR) ? "ABR" : "CQP");
@@ -506,6 +508,24 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
     param->level_idc = tmp_level * 30;
     /* update band idc */
     param->band_idc = vars->band;
+
+    /* update fps */
+    if (strpbrk(vars->fps, "/") != NULL)
+    {
+        sscanf(vars->fps, "%d/%d", &param->fps_num, &param->fps_den);
+    }
+    else if (strpbrk(vars->fps, ".") != NULL)
+    {
+        float tmp_fps = 0;
+        sscanf(vars->fps, "%f", &tmp_fps);
+        param->fps_num = tmp_fps * 10000;
+        param->fps_den = 10000;
+    }
+    else
+    {
+        sscanf(vars->fps, "%d", &param->fps_num);
+        param->fps_den = 1;
+    }
 
     return 0;
 }
@@ -793,12 +813,14 @@ int main(int argc, const char** argv)
             ret = oapve_encode(id, &ifrms, mid, &bitb, &stat, &rfrms);
 
             for(int i = 0; i < num_frames; i++) {
-                if(args_var->input_depth != 10) {
-                    imgb_cpy(imgb_w, rfrms.frm[i].imgb);
-                    imgb_o = imgb_w;
-                }
-                else {
-                    imgb_o = rfrms.frm[i].imgb;
+                if(is_rec){
+                    if(args_var->input_depth != 10) {
+                        imgb_cpy(imgb_w, rfrms.frm[i].imgb);
+                        imgb_o = imgb_w;
+                    }
+                    else {
+                        imgb_o = rfrms.frm[i].imgb;
+                    }
                 }
 
                 clk_end = oapv_clk_from(clk_beg);
@@ -846,7 +868,7 @@ int main(int argc, const char** argv)
                     total_time          = total_time % 60;
                     int    s            = total_time;
                     double curr_bitrate = bitrate;
-                    curr_bitrate *= (param->fps * 8);
+                    curr_bitrate *= (((float)param->fps_num / param->fps_den) * 8);
                     curr_bitrate /= (encod_frames + 1);
                     curr_bitrate /= 1000;
                     logv2("[ %d / %d frames ] [ %.2f frame/sec ] [ %.4f kbps ] [ %2dh %2dm %2ds ] \r", encod_frames, max_frames, ((float)(encod_frames + 1) * 1000) / ((float)oapv_clk_msec(clk_tot)), curr_bitrate, h, m, s);
@@ -886,7 +908,7 @@ int main(int argc, const char** argv)
         logv3("  PSNR T(dB)       : %-5.4f\n", psnr_avg[3]);
     }
     logv3("  Total bits(bits) : %.0f\n", bitrate * 8);
-    bitrate *= (param->fps * 8);
+    bitrate *= (((float)param->fps_num / param->fps_den) * 8);
     bitrate /= pic_cnt;
     bitrate /= 1000;
 
