@@ -69,6 +69,7 @@ struct _ARGS_PARSER
     int (*get_help)(ARGS_PARSER * args, int idx, char * help);
     int (*get_str)(ARGS_PARSER * args, char * keyl, char * str, int *flag);
     int (*get_int)(ARGS_PARSER * args, char * keyl, int * val, int *flag);
+    int (*set_str)(ARGS_PARSER * args, char * keyl, char * str);
     int (*set_int)(ARGS_PARSER * args, char * keyl, int val);
     int (*set_flag)(ARGS_PARSER * args, char * keyl, int flag);
     int (*check_mandatory)(ARGS_PARSER * args, char ** err_arg);
@@ -392,6 +393,23 @@ static int args_get(ARGS_PARSER * args, char * keyl, void ** val, int * flag)
     }
 }
 
+static int args_set_str(ARGS_PARSER * args, char * keyl, char * str)
+{
+    int idx;
+
+    idx = args_search_long_key(args->opts, keyl);
+    if(idx >= 0)
+    {
+        sprintf((char*)(args->opts[idx].val), "%s", str);
+        args->opts[idx].flag = 1;
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
+}
+
 static int args_set_int(ARGS_PARSER * args, char * keyl, int val)
 {
     int idx;
@@ -579,6 +597,7 @@ static ARGS_PARSER * args_create(const ARGS_OPT * opt_table, int num_opt)
     args->get_help = args_get_help;
     args->get_str = args_get_str;
     args->get_int = args_get_int;
+    args->set_str = args_set_str;
     args->set_int = args_set_int;
     args->set_flag = args_set_flag;
     args->check_mandatory = args_check_mandatory;

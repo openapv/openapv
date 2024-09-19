@@ -267,8 +267,6 @@ typedef struct oapve_rc_param
 {
     double alpha;
     double beta;
-    int    valid_pix;
-    int    target_bits_per_mb;
 
     int    qp;
     double lambda;
@@ -280,7 +278,6 @@ typedef struct oapve_rc_tile
     int    qp;
     int    target_bits;
     double lambda;
-    double bit_weight;
     int    number_pixel;
     double cost;
     int    target_bits_left;

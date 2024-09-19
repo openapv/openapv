@@ -442,12 +442,6 @@ static int enc_init_param(oapve_ctx_t *ctx, oapve_param_t *param)
     ctx->th = (oapv_th_t*)oapv_malloc(size);
     oapv_assert_rv(ctx->th, OAPV_ERR_UNKNOWN);
 
-    if (param->rc_type != 0)
-    {
-        int num_mb = tmp_w * tmp_h;
-        ctx->rc_param.target_bits_per_mb = (int64_t)param->bitrate * 1000 / (num_mb * param->fps);
-    }
-
     return OAPV_OK;
 }
 
@@ -951,7 +945,7 @@ static int enc_frame(oapve_ctx_t *ctx)
     {
         oapve_rc_get_tile_cost_thread(ctx, &cost_sum);
 
-        double bits_pic = ((double)ctx->param->bitrate * 1000) / ctx->param->fps;
+        double bits_pic = ((double)ctx->param->bitrate * 1000) / ((double)ctx->param->fps_num / ctx->param->fps_den);
         for (int i = 0; i < ctx->num_tiles; i++)
         {
             ctx->ti[i].rc.target_bits_left = bits_pic * ctx->ti[i].rc.cost / cost_sum;
@@ -1187,11 +1181,17 @@ int oapve_config(oapve_t eid, int cfg, void *buf, int *size)
                        OAPV_ERR_INVALID_ARGUMENT);
         ctx->param->qp = t0;
         break;
-    case OAPV_CFG_SET_FPS:
+    case OAPV_CFG_SET_FPS_NUM:
         oapv_assert_rv(*size == sizeof(int), OAPV_ERR_INVALID_ARGUMENT);
-        t0 = *((int *)buf);
+        t0 = *((int*)buf);
         oapv_assert_rv(t0 > 0, OAPV_ERR_INVALID_ARGUMENT);
-        ctx->param->fps = t0;
+        ctx->param->fps_num = t0;
+        break;
+    case OAPV_CFG_SET_FPS_DEN:
+        oapv_assert_rv(*size == sizeof(int), OAPV_ERR_INVALID_ARGUMENT);
+        t0 = *((int*)buf);
+        oapv_assert_rv(t0 > 0, OAPV_ERR_INVALID_ARGUMENT);
+        ctx->param->fps_den = t0;
         break;
     case OAPV_CFG_SET_BPS:
         oapv_assert_rv(*size == sizeof(int), OAPV_ERR_INVALID_ARGUMENT);
@@ -1216,9 +1216,13 @@ int oapve_config(oapve_t eid, int cfg, void *buf, int *size)
         oapv_assert_rv(*size == sizeof(int), OAPV_ERR_INVALID_ARGUMENT);
         *((int *)buf) = ctx->param->h;
         break;
-    case OAPV_CFG_GET_FPS:
+    case OAPV_CFG_GET_FPS_NUM:
         oapv_assert_rv(*size == sizeof(int), OAPV_ERR_INVALID_ARGUMENT);
-        *((int *)buf) = ctx->param->fps;
+        *((int*)buf) = ctx->param->fps_num;
+        break;
+    case OAPV_CFG_GET_FPS_DEN:
+        oapv_assert_rv(*size == sizeof(int), OAPV_ERR_INVALID_ARGUMENT);
+        *((int*)buf) = ctx->param->fps_den;
         break;
     case OAPV_CFG_GET_BPS:
         oapv_assert_rv(*size == sizeof(int), OAPV_ERR_INVALID_ARGUMENT);

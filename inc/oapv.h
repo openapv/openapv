@@ -127,7 +127,8 @@ extern "C"
  *****************************************************************************/
 #define OAPV_CFG_SET_QP                 (201)
 #define OAPV_CFG_SET_BPS                (202)
-#define OAPV_CFG_SET_FPS                (204)
+#define OAPV_CFG_SET_FPS_NUM            (204)
+#define OAPV_CFG_SET_FPS_DEN            (205)
 #define OAPV_CFG_SET_QP_MIN             (208)
 #define OAPV_CFG_SET_QP_MAX             (209)
 #define OAPV_CFG_SET_USE_FRM_HASH       (301)
@@ -136,7 +137,8 @@ extern "C"
 #define OAPV_CFG_GET_QP                 (602)
 #define OAPV_CFG_GET_RCT                (603)
 #define OAPV_CFG_GET_BPS                (604)
-#define OAPV_CFG_GET_FPS                (605)
+#define OAPV_CFG_GET_FPS_NUM            (605)
+#define OAPV_CFG_GET_FPS_DEN            (606)
 #define OAPV_CFG_GET_WIDTH              (701)
 #define OAPV_CFG_GET_HEIGHT             (702)
 
@@ -366,9 +368,10 @@ struct oapve_param {
     int w;
     /* height of input frame */
     int h;
-    /* frame rate (Hz) */
-    int fps;
-    /* Rate control type */
+    /* frame rate (Hz) numerator, denominator */
+    int fps_num;
+    int fps_den;
+    /* rate control type */
     int rc_type;
     /* quantization parameter */
     int qp;

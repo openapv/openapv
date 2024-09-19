@@ -3,10 +3,23 @@
 
 [![Build & test](https://github.com/cpncf/apv/actions/workflows/build.yml/badge.svg)](https://github.com/cpncf/apv/actions/workflows/build.yml)
 
-OpenAPV provides the reference implementation of the APV codec which can be used to record professional-grade video and associated metadata without quality degradation.
+OpenAPV provides the reference implementation of the [APV codec](#apv-codec) which can be used to record professional-grade video and associated metadata without quality degradation. OpenAPV is free and open source software provided by [LICENSE](#license).
+
+The OpenAPV supports the following features:
+
+- fully compliant with 422-10 and 400-10 profile of [APV codec](#apv-codec)
+- Low complexity by optimization for ARM NEON and x86(64bit) SEE/AVX CPU
+- Supports tile-based multi-threading
+- Supports Various metadata including HDR10/10+ and user-defined format
+- Constant QP (CQP), average bitrate (ABR), and constant rate factor (CRF) are supported
+
 
 ## APV codec
-The APV codec is a professional video codec, which was developed in response to the need for professional level high quality video recording and post production. The primary purpose of the APV codec is for use in professional video recording and editing workflows for various types of content. The APV codec supports the following features:
+The APV codec is a professional video codec, which was developed in response to the need for professional level high quality video recording and post production. The primary purpose of the APV codec is for use in professional video recording and editing workflows for various types of content. 
+
+APV codec utilizes technologies known to be over 20 years to achieve a royalty free codec. APV builds a video codec using only conventional coding technologies, which consist of traditional methods published between the early 1980s and the end of the 1990s.
+
+The APV codec standard has the following features:
 
 - Perceptually lossless video quality, which is close to raw video quality
 - Low complexity and high throughput intra frame only coding without pixel domain prediction
@@ -20,6 +33,7 @@ The APV codec is a professional video codec, which was developed in response to 
 ### Related specification
 - APV Codec (bitstream): [https://datatracker.ietf.org/doc/draft-lim-apv/](https://datatracker.ietf.org/doc/draft-lim-apv/)
   - Scope of OpenAPV project
+- APV ISO based media file format: [APV-ISOBMFF](/readme/apv_isobmff.md)
 - APV RTP payload format: [https://datatracker.ietf.org/doc/draft-lim-rtp-apv/](https://datatracker.ietf.org/doc/draft-lim-rtp-apv/)
 
 ## How to build
@@ -81,3 +95,4 @@ cpack -G TGZ
 ## License
 
 See [LICENSE](LICENSE) file for details.
+
