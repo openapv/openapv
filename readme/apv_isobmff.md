@@ -28,7 +28,7 @@ The sample entry with APV1SampleEntry type specifies that the track contains APV
 
 ### Syntax 		
 
-class APV1SmapleEntry extends VisualSampleEntry(��apv1��){
+class APV1SmapleEntry extends VisualSampleEntry('apv1'){
 	APVCodecConfigurationBox	config;
 }
 
@@ -188,7 +188,7 @@ Every samples of APV bitstream shall be sync samples.
 For the use of the SubSampleInformationBox as defined in ISO/IEC 14496-12 in an APV stream, a sub-sample is defined on the basis of the value of the flags field of the sub-sample information box as specified below. The presence of this box is optional; however, if present in a track containing APV data, the codec_specific_parameters field in the box shall have the semantics defined here.
 
 flags specifies the type of sub-sample information given in this box as follows:
->0:	tile-based sub-samples: A sub-sample contains one tile.
+>0:	tile-based sub-samples: A sub-sample contains one tile
 >1:	PBU-based sub-samples : A sub-sample contains one PBU
 Other values of flags are reserved.
 
