@@ -96,3 +96,6 @@ cpack -G TGZ
 
 See [LICENSE](LICENSE) file for details.
 
+## Graphic logo
+![OAPV](/readme/img/oapv_logo_bar_64.png) ![OAPV](/readme/img/oapv_logo_bar_128.png) ![OAPV](/readme/img/oapv_logo_bar_256.png)
+![OAPV](/readme/img/oapv_logo_btn_64.png) ![OAPV](/readme/img/oapv_logo_btn_96.png) ![OAPV](/readme/img/oapv_logo_btn_128.png)
