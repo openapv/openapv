@@ -1,7 +1,7 @@
 ![OAPV](/readme/img/oapv_logo_bar_256.png)
 # OpenAPV (Open Advanced Professional Video Codec)
-
-[![Build & test](https://github.com/cpncf/apv/actions/workflows/build.yml/badge.svg)](https://github.com/cpncf/apv/actions/workflows/build.yml)
+|
+[![Build and test](https://github.com/openapv/openapv/actions/workflows/build.yml/badge.svg)](https://github.com/openapv/openapv/actions/workflows/build.yml)
 
 OpenAPV provides the reference implementation of the [APV codec](#apv-codec) which can be used to record professional-grade video and associated metadata without quality degradation. OpenAPV is free and open source software provided by [LICENSE](#license).
 
@@ -40,14 +40,26 @@ The APV codec standard has the following features:
 - Build Requirements
   - CMake (download from [https://cmake.org/](https://cmake.org/))
   - GCC
-- Build Instructions
+ 
+  For ARM
+  - gcc-aarch64-linux-gnu
+  - binutils-aarch64-linux-gnu
+
+- Build Instructions PC
   ```
   cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
   cmake --build build
   ```
+
+- Build Instructions ARM
+  ```
+  cmake -DCMAKE_BUILD_TYPE=Release -S . -B build-arm -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DARM=TRUE -DCMAKE_SYSTEM_PROCESSOR=aarch64
+  cmake --build build-arm
+  ```
+
 - Output Location
-  - Executable applications can be found under build/bin/
-  - Library files can be found under build/lib/
+  - Executable applications can be found under build/bin/ or build-arm/bin/
+  - Library files can be found under build/lib/ or build-arm/lib/
 
 ## How to use
 ### Encoder
