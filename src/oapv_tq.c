@@ -74,9 +74,10 @@ void oapv_tx_pb8b(s16* src, s16* dst, int shift, int line)
     }
 }
 
-const oapv_fn_tx_t oapv_tbl_fn_tx[1] =
+const oapv_fn_tx_t oapv_tbl_fn_tx[2] =
 {
     oapv_tx_pb8b,
+        NULL
 };
 
 static __inline int get_transform_shift(int log2_size, int type, int bit_depth)
@@ -89,17 +90,17 @@ static __inline int get_transform_shift(int log2_size, int type, int bit_depth)
     }
 }
 
-void oapv_trans(oapve_ctx_t * ctx, s16 * coef, int log2_block_w, int log2_block_h, int bit_depth)
+void oapv_trans(oapve_ctx_t * ctx, s16 * coef, int log2_w, int log2_h, int bit_depth)
 {
-    int shift1 = get_transform_shift(log2_block_w, 0, bit_depth);
-    int shift2 = get_transform_shift(log2_block_h, 1, bit_depth);
+    int shift1 = get_transform_shift(log2_w, 0, bit_depth);
+    int shift2 = get_transform_shift(log2_h, 1, bit_depth);
 
-    ALIGNED_16(s16 tb[OAPV_BLOCK_D]);
-    (ctx->fn_txb)[0](coef, tb, shift1, 1 << log2_block_h);
-    (ctx->fn_txb)[0](tb, coef, shift2, 1 << log2_block_w);
+    ALIGNED_16(s16 tb[OAPV_BLK_D]);
+    (ctx->fn_txb)[0](coef, tb, shift1, 1 << log2_h);
+    (ctx->fn_txb)[0](tb, coef, shift2, 1 << log2_w);
 
 }
-int oapv_quant_nnz(u8 qp, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W], s16* coef, int log2_block_w, int log2_block_h,
+int oapv_quant_nnz(u8 qp, int q_matrix[OAPV_BLK_H * OAPV_BLK_W], s16* coef, int log2_w, int log2_h,
     u16 scale, int ch_type, int bit_depth, int deadzone_offset)
 {
     int nnz = 0;
@@ -109,11 +110,11 @@ int oapv_quant_nnz(u8 qp, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W], s16* coef, 
     int i;
     int shift;
     int tr_shift;
-    int log2_size = (log2_block_w + log2_block_h) >> 1;
+    int log2_size = (log2_w + log2_h) >> 1;
     tr_shift = MAX_TX_DYNAMIC_RANGE - bit_depth - log2_size;
     shift = QUANT_SHIFT + tr_shift + (qp / 6);
     offset = deadzone_offset << (shift - 9);
-    int pixels = (1 << (log2_block_w + log2_block_h));
+    int pixels = (1 << (log2_w + log2_h));
     for (i = 0; i < pixels; i++)
     {
         sign = oapv_get_sign(coef[i]);
@@ -125,9 +126,10 @@ int oapv_quant_nnz(u8 qp, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W], s16* coef, 
     }
     return nnz;
 }
-const oapv_fn_quant_t oapv_tbl_fn_quant[1] =
+const oapv_fn_quant_t oapv_tbl_fn_quant[2] =
 {
     oapv_quant_nnz,
+        NULL
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -169,12 +171,13 @@ void oapv_itx_pb8b(s16* src, s16* dst, int shift, int line)
     }
 }
 
-const oapv_fn_itx_t oapv_tbl_fn_itx[1] =
+const oapv_fn_itx_t oapv_tbl_fn_itx[2] =
 {
     oapv_itx_pb8b,
+        NULL
 };
 
-static void oapv_dquant(s16 *coef, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W], int log2_w, int log2_h, int scale, s8 shift)
+static void oapv_dquant(s16 *coef, int q_matrix[OAPV_BLK_H * OAPV_BLK_W], int log2_w, int log2_h, int scale, s8 shift)
 {
     int i;
     int lev;
@@ -199,9 +202,10 @@ static void oapv_dquant(s16 *coef, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W], in
         }
     }
 }
-const oapv_fn_iquant_t oapv_tbl_fn_iquant[1] =
+const oapv_fn_iquant_t oapv_tbl_fn_iquant[2] =
 {
     oapv_dquant,
+        NULL
 };
 static void oapv_iquant_nnz_no_qp_matrix(s16 *coef, int q_matrix, s8 shift)
 {
@@ -228,21 +232,22 @@ static void oapv_iquant_nnz_no_qp_matrix(s16 *coef, int q_matrix, s8 shift)
         }
     }
 }
-const oapv_fn_iquant_t_no_qp_matrix oapv_tbl_fn_iquant_no_qp_matrix[1] =
+const oapv_fn_iquant_t_no_qp_matrix oapv_tbl_fn_iquant_no_qp_matrix[2] =
 {
     oapv_iquant_nnz_no_qp_matrix,
+        NULL
 };
 
 void oapv_itrans(const oapv_fn_itx_t* fn_itx, s16* coef, int log2_w, int log2_h, int bit_depth)
 {
-    ALIGNED_16(s16 tb[OAPV_BLOCK_D]); /* temp buffer */
+    ALIGNED_16(s16 tb[OAPV_BLK_D]); /* temp buffer */
 
     fn_itx[0](coef, tb, ITX_SHIFT1, 1 << log2_w);
     fn_itx[0](tb, coef, ITX_SHIFT2(bit_depth), 1 << log2_h);
 
 
 }
-void oapv_itdq_block(const oapv_fn_itx_t *fn_itx, const oapv_fn_iquant_t *fn_iquant, int q_matrix[OAPV_BLOCK_H  * OAPV_BLOCK_W], s16 *coef, int log2_w, int log2_h, int scale, int bit_depth, int qp)
+void oapv_itdq_block(const oapv_fn_itx_t *fn_itx, const oapv_fn_iquant_t *fn_iquant, int q_matrix[OAPV_BLK_H  * OAPV_BLK_W], s16 *coef, int log2_w, int log2_h, int scale, int bit_depth, int qp)
 {
     s8 shift;
     int log2_size = (log2_w + log2_h) >> 1;

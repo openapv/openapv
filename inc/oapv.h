@@ -41,18 +41,21 @@ extern "C"
 
 /* size of macroblock */
 #define OAPV_LOG2_MB                    (4)
-#define OAPV_MB                         (1 << OAPV_LOG2_MB)
-#define OAPV_MB_W                       (1 << OAPV_LOG2_MB)
-#define OAPV_MB_H                       (1 << OAPV_LOG2_MB)
+#define OAPV_LOG2_MB_W                  (4)
+#define OAPV_LOG2_MB_H                  (4)
+#define OAPV_MB_W                       (1 << OAPV_LOG2_MB_W)
+#define OAPV_MB_H                       (1 << OAPV_LOG2_MB_H)
 #define OAPV_MB_D                       (OAPV_MB_W * OAPV_MB_H)
 
 /* size of block */
-#define OAPV_LOG2_BLOCK                 (3)
-#define OAPV_BLOCK                      (1 << OAPV_LOG2_BLOCK)
-#define OAPV_BLOCK_W                    (1 << OAPV_LOG2_BLOCK)
-#define OAPV_BLOCK_H                    (1 << OAPV_LOG2_BLOCK)
-#define OAPV_BLOCK_D                    (OAPV_BLOCK_W * OAPV_BLOCK_H)
+#define OAPV_LOG2_BLK                   (3)
+#define OAPV_LOG2_BLK_W                 (3)
+#define OAPV_LOG2_BLK_H                 (3)
+#define OAPV_BLK_W                      (1 << OAPV_LOG2_BLK)
+#define OAPV_BLK_H                      (1 << OAPV_LOG2_BLK)
+#define OAPV_BLK_D                      (OAPV_BLK_W * OAPV_BLK_H)
 
+/* maximum number of thread */
 #define OAPV_MAX_THREADS                (32)
 
 /*****************************************************************************
@@ -385,9 +388,9 @@ struct oapve_param {
     int use_filler;
     /* use filler quantization matrix */
     int use_q_matrix;
-    int q_matrix_y[OAPV_BLOCK_D];
-    int q_matrix_u[OAPV_BLOCK_D];
-    int q_matrix_v[OAPV_BLOCK_D];
+    int q_matrix_y[OAPV_BLK_D];
+    int q_matrix_u[OAPV_BLK_D];
+    int q_matrix_v[OAPV_BLK_D];
     /* color space */
     int csp;
     int tile_cols;

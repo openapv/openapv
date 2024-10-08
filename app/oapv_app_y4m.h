@@ -64,7 +64,7 @@ static int y4m_parse_tags(Y4M_INFO * y4m, char * tags)
     char *q;
     char t_buff[20];
     int found_w = 0, found_h = 0, found_cf = 0;
-    int fps_n, fps_d, pix_ratio_n, pix_ratio_d, interlace;
+    int fps_n, fps_d, pix_ratio_n, pix_ratio_d;
 
     for (p = tags;; p = q)
     {
@@ -104,7 +104,7 @@ static int y4m_parse_tags(Y4M_INFO * y4m, char * tags)
         }
         case 'I':
         {
-           interlace = p[1];
+           //interlace = p[1];
            break;
         }
         case 'A':

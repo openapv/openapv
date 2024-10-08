@@ -40,12 +40,12 @@ int oapve_rc_get_tile_cost(oapve_ctx_t* ctx, int tile_idx)
     {
         int step_w = c ? 8 << ctx->ch_sft_w : 8;
         int step_h = c ? 8 << ctx->ch_sft_h : 8;
-        for (int y = 0; y < ctx->ti[tile_idx].height; y += step_h)
+        for (int y = 0; y < ctx->ti[tile_idx].h; y += step_h)
         {
-            for (int x = 0; x < ctx->ti[tile_idx].width; x += step_w)
+            for (int x = 0; x < ctx->ti[tile_idx].w; x += step_w)
             {
-                int tx = ctx->ti[tile_idx].col + x;
-                int ty = ctx->ti[tile_idx].row + y;
+                int tx = ctx->ti[tile_idx].x + x;
+                int ty = ctx->ti[tile_idx].y + y;
                 ctx->fn_imgb_to_block(ctx->imgb, c, tx, ty, 8, 8, temp);
                 sum += ctx->fn_had8x8(temp, 8);
                 ctx->ti[tile_idx].rc.number_pixel += 64;
@@ -60,7 +60,7 @@ int oapve_rc_get_tile_cost(oapve_ctx_t* ctx, int tile_idx)
 
 int get_tile_cost_thread(void* arg)
 {
-    rc_core_t* rc_core = (rc_core_t*)arg;
+    oapve_rc_core_t* rc_core = (oapve_rc_core_t*)arg;
     oapve_ctx_t* ctx = rc_core->ctx;
     int tile_idx, ret;
 
@@ -71,9 +71,9 @@ int get_tile_cost_thread(void* arg)
         oapv_tpool_enter_cs(ctx->sync_obj);
         for (tile_idx = 0; tile_idx < ctx->num_tiles; tile_idx++)
         {
-            if (ctx->sync_flag[tile_idx] == 0)
+            if (ctx->tile_stat[tile_idx] == ENC_TILE_STAT_NOT_ENCODED)
             {
-                ctx->sync_flag[tile_idx] = 1;
+                ctx->tile_stat[tile_idx] = ENC_TILE_STAT_ON_ENCODING;
                 rc_core->tile_idx = tile_idx;
                 break;
             }
@@ -91,7 +91,7 @@ ERR:
 int oapve_rc_get_tile_cost_thread(oapve_ctx_t* ctx, u64* sum)
 {
     for (int i = 0; i < ctx->num_tiles; i++) {
-        ctx->sync_flag[i] = 0;
+        ctx->tile_stat[i] = ENC_TILE_STAT_NOT_ENCODED;
     }
 
     int parallel_task = 1;
@@ -101,7 +101,7 @@ int oapve_rc_get_tile_cost_thread(oapve_ctx_t* ctx, u64* sum)
     tpool = ctx->tpool;
 
     for (int i = 0; i < parallel_task; i++) {
-        ctx->sync_flag[i] = 1;
+        ctx->tile_stat[i] = ENC_TILE_STAT_ON_ENCODING;
     }
     // run new threads
     int tidx = 0;
@@ -126,7 +126,7 @@ int oapve_rc_get_tile_cost_thread(oapve_ctx_t* ctx, u64* sum)
     for (int i = 0; i < ctx->num_tiles; i++)
     {
         *sum += ctx->ti[i].rc.cost;
-        ctx->sync_flag[i] = 0;
+        ctx->tile_stat[i] = ENC_TILE_STAT_NOT_ENCODED;
     }
 
     return ret;

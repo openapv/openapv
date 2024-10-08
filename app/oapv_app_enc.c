@@ -420,7 +420,7 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
         char* tmp           = vars->q_matrix_y;
         int   cnt           = 0;
         int   len_cnt       = 0;
-        while(len_cnt < len_y && cnt < OAPV_BLOCK_D) {
+        while(len_cnt < len_y && cnt < OAPV_BLK_D) {
             sscanf(tmp, "%d", &param->q_matrix_y[cnt]);
             if(param->q_matrix_y[cnt] < 1 || param->q_matrix_y[cnt] > 256) {
                 logerr("input value of q_matrix_y is invalid\n");
@@ -430,7 +430,7 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
             tmp = vars->q_matrix_y + len_cnt;
             cnt++;
         }
-        if(cnt < OAPV_BLOCK_D) {
+        if(cnt < OAPV_BLK_D) {
             logerr("input number of q_matrix_y is not enough\n");
             return -1;
         }
@@ -442,7 +442,7 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
         char* tmp           = vars->q_matrix_u;
         int   cnt           = 0;
         int   len_cnt       = 0;
-        while(len_cnt < len_u && cnt < OAPV_BLOCK_D) {
+        while(len_cnt < len_u && cnt < OAPV_BLK_D) {
             sscanf(tmp, "%d", &param->q_matrix_u[cnt]);
             if(param->q_matrix_u[cnt] < 1 || param->q_matrix_u[cnt] > 256) {
                 logerr("input value of q_matrix_u is invalid\n");
@@ -452,7 +452,7 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
             tmp = vars->q_matrix_u + len_cnt;
             cnt++;
         }
-        if(cnt < OAPV_BLOCK_D) {
+        if(cnt < OAPV_BLK_D) {
             logerr("input number of q_matrix_u is not enough\n");
             return -1;
         }
@@ -464,7 +464,7 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
         char* tmp           = vars->q_matrix_v;
         int   cnt           = 0;
         int   len_cnt       = 0;
-        while(len_cnt < len_v && cnt < OAPV_BLOCK_D) {
+        while(len_cnt < len_v && cnt < OAPV_BLK_D) {
             sscanf(tmp, "%d", &param->q_matrix_v[cnt]);
             if(param->q_matrix_v[cnt] < 1 || param->q_matrix_v[cnt] > 256) {
                 logerr("input value of q_matrix_v is invalid\n");
@@ -474,7 +474,7 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
             tmp = vars->q_matrix_v + len_cnt;
             cnt++;
         }
-        if(cnt < OAPV_BLOCK_D) {
+        if(cnt < OAPV_BLK_D) {
             logerr("input number of q_matrix_v is not enough\n");
             return -1;
         }
@@ -482,19 +482,19 @@ static int update_param(ARGS_VAR* vars, oapve_param_t* param)
 
     if(param->use_q_matrix) {
         if(len_y == 0) {
-            for(int i = 0; i < OAPV_BLOCK_D; i++) {
+            for(int i = 0; i < OAPV_BLK_D; i++) {
                 param->q_matrix_y[i] = 16;
             }
         }
 
         if(len_u == 0) {
-            for(int i = 0; i < OAPV_BLOCK_D; i++) {
+            for(int i = 0; i < OAPV_BLK_D; i++) {
                 param->q_matrix_u[i] = 16;
             }
         }
 
         if(len_v == 0) {
-            for(int i = 0; i < OAPV_BLOCK_D; i++) {
+            for(int i = 0; i < OAPV_BLK_D; i++) {
                 param->q_matrix_v[i] = 16;
             }
         }

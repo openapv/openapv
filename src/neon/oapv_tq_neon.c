@@ -29,9 +29,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+
 #include "oapv_def.h"
 #include "oapv_tq_neon.h"
+#if ARM_NEON
 #include "sse2neon.h"
+
 
 #define OAPV_ITX_CLIP_SSE(X, min, max) \
     X = _mm_max_epi32(X, min_val);    \
@@ -511,9 +514,10 @@ static void oapv_tx_pb8b_neon(s16 *src, s16 *dst, const int shift, int line)
     }
 }
 
-const oapv_fn_tx_t oapv_tbl_fn_txb_neon[1] =
+const oapv_fn_tx_t oapv_tbl_fn_txb_neon[2] =
     {
         oapv_tx_pb8b_neon,
+            NULL
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -644,12 +648,13 @@ static void oapv_itx_pb8b_neon(s16 *src, s16 *dst, int shift, int line)
     }
 }
 
-const oapv_fn_itx_t oapv_tbl_fn_itx_neon[1] =
+const oapv_fn_itx_t oapv_tbl_fn_itx_neon[2] =
     {
         oapv_itx_pb8b_neon,
+            NULL
 };
 
-static int oapv_quant_nnz_simple_neon(u8 qp, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W], s16* coef, int log2_block_w, int log2_block_h,
+static int oapv_quant_nnz_simple_neon(u8 qp, int q_matrix[OAPV_BLK_H * OAPV_BLK_W], s16* coef, int log2_w, int log2_h,
     u16 scale, int ch_type, int bit_depth, int deadzone_offset)
 {
     int nnz = 0;
@@ -657,11 +662,11 @@ static int oapv_quant_nnz_simple_neon(u8 qp, int q_matrix[OAPV_BLOCK_H * OAPV_BL
     int shift;
     int tr_shift;
 
-    int log2_size = (log2_block_w + log2_block_h) >> 1;
+    int log2_size = (log2_w + log2_h) >> 1;
     tr_shift = MAX_TX_DYNAMIC_RANGE - bit_depth - log2_size;
     shift = QUANT_SHIFT + tr_shift + (qp / 6);
     offset = deadzone_offset << (shift - 9);
-    int pixels=(1 << (log2_block_w + log2_block_h));
+    int pixels=(1 << (log2_w + log2_h));
 
     int i;
     int32x4_t matrix_low ;
@@ -700,12 +705,13 @@ static int oapv_quant_nnz_simple_neon(u8 qp, int q_matrix[OAPV_BLOCK_H * OAPV_BL
 }
 
 
-const oapv_fn_quant_t oapv_tbl_quantb_neon[1] =
+const oapv_fn_quant_t oapv_tbl_quantb_neon[2] =
 {
     oapv_quant_nnz_simple_neon,
+        NULL
 };
 
-static void oapv_dquant_simple_neon(s16 *coef, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W], int log2_w, int log2_h, int scale, s8 shift)
+static void oapv_dquant_simple_neon(s16 *coef, int q_matrix[OAPV_BLK_H * OAPV_BLK_W], int log2_w, int log2_h, int scale, s8 shift)
 {
     int i;
     int pixels = (1 << (log2_w + log2_h));
@@ -765,7 +771,10 @@ static void oapv_dquant_simple_neon(s16 *coef, int q_matrix[OAPV_BLOCK_H * OAPV_
         }
     }
 }
-const oapv_fn_iquant_t oapv_tbl_fn_iquant_neon[1] =
+const oapv_fn_iquant_t oapv_tbl_fn_iquant_neon[2] =
 {
     oapv_dquant_simple_neon,
+        NULL
 };
+
+#endif
