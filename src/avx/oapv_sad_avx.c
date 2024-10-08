@@ -32,9 +32,10 @@
 #include "oapv_sad_avx.h"
 
 #if X86_SSE
-const OAPV_FN_SAD oapv_tbl_sad_16b_avx[1] =
+const oapv_fn_sad_t oapv_tbl_sad_16b_avx[2] =
 {
     oapv_sad_16b_sse_8x2n,
+        NULL
 };
 
 #endif

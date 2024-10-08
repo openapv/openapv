@@ -40,20 +40,6 @@
 
 #if X86_SSE
 
-/* Buffer Alignement */
-#if defined(_WIN32) && !defined(__GNUC__)
-#define DECLARE_ALIGNED(var, n) __declspec(align(n)) var
-#else
-#define DECLARE_ALIGNED(var, n) var __attribute__((aligned (n)))
-#endif
-
-#define ALIGNED_16(var)     DECLARE_ALIGNED(var, 16)
-#define ALIGNED_32(var)     DECLARE_ALIGNED(var, 32)
-#define ALIGNED_128(var)    DECLARE_ALIGNED(var, 128)
-
-extern const oapv_fn_tx_t oapv_tbl_txb_avx[1];
-extern const oapv_fn_quant_t oapv_tbl_quantb_avx[1];
-
 #define CALCU_2x8(c0, c1, d0, d1) \
     v0 = _mm256_madd_epi16(s0, c0); \
     v1 = _mm256_madd_epi16(s1, c0); \
@@ -143,8 +129,10 @@ extern const oapv_fn_quant_t oapv_tbl_quantb_avx[1];
 
 
 #if X86_SSE
-extern const oapv_fn_itx_t oapv_tbl_fn_itx_avx[1];
-extern const oapv_fn_iquant_t oapv_tbl_fn_iquant_avx[1];
+extern const oapv_fn_tx_t oapv_tbl_txb_avx[2];
+extern const oapv_fn_quant_t oapv_tbl_quantb_avx[2];
+extern const oapv_fn_itx_t oapv_tbl_fn_itx_avx[2];
+extern const oapv_fn_iquant_t oapv_tbl_fn_iquant_avx[2];
 #endif /* X86_SSE */
 
 

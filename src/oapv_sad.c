@@ -32,11 +32,6 @@
 #include "oapv_def.h"
 #include <math.h>
 
-
-const OAPV_FN_SAD  (* oapv_func_sad);
-const OAPV_FN_SSD  (* oapv_func_ssd);
-const OAPV_FN_DIFF (* oapv_func_diff);
-
 /* SAD for 16bit **************************************************************/
 int oapv_sad_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int bit_depth)
 {
@@ -63,10 +58,10 @@ int oapv_sad_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2, i
     return (sad >> (bit_depth - 8));
 }
 
-/* index: [log2 of width][log2 of height] */
-const OAPV_FN_SAD oapv_tbl_sad_16b[1] =
+const oapv_fn_sad_t oapv_tbl_sad_16b[2] =
 {
     oapv_sad_16b,
+        NULL
 };
 
 /* DIFF **********************************************************************/
@@ -92,9 +87,10 @@ void oapv_diff_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2,
     }
 }
 
-const OAPV_FN_DIFF oapv_tbl_diff_16b[1] =
+const oapv_fn_diff_t oapv_tbl_diff_16b[2] =
 {
-    oapv_diff_16b
+    oapv_diff_16b,
+        NULL
 };
 
 /* SSD ***********************************************************************/
@@ -123,9 +119,10 @@ s64 oapv_ssd_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2, i
     return ssd;
 }
 
-const OAPV_FN_SSD oapv_tbl_ssd_16b[1] =
+const oapv_fn_ssd_t oapv_tbl_ssd_16b[2] =
 {
-    oapv_ssd_16b
+    oapv_ssd_16b,
+        NULL
 };
 
 int oapv_dc_removed_had8x8(pel* org, int s_org)

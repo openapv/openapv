@@ -30,10 +30,9 @@
  */
 
 #include "oapv_def.h"
-#include <math.h>
-#include "sse2neon.h"
 
 #if ARM_NEON
+#include "sse2neon.h"
 
 /* SAD for 16bit **************************************************************/
 int sad_16b_neon_8x2n(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int bit_depth)
@@ -109,9 +108,10 @@ int sad_16b_neon_8x2n(int w, int h, void *src1, void *src2, int s_src1, int s_sr
     return (sad);
 }
 
-const OAPV_FN_SAD oapv_tbl_sad_16b_neon[1] =
+const oapv_fn_sad_t oapv_tbl_sad_16b_neon[2] =
     {
         sad_16b_neon_8x2n,
+            NULL
 };
 
 /* DIFF **********************************************************************/
@@ -139,9 +139,10 @@ static void diff_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, 
     SSE_DIFF_16B_8PEL(s1 + s_src1 * 6, s2 + s_src2 * 6, diff + s_diff * 6, m07, m08, m09);
     SSE_DIFF_16B_8PEL(s1 + s_src1 * 7, s2 + s_src2 * 7, diff + s_diff * 7, m10, m11, m12);
 }
-const OAPV_FN_DIFF oapv_tbl_diff_16b_neon[1] =
+const oapv_fn_diff_t oapv_tbl_diff_16b_neon[2] =
     {
-        diff_16b_neon_8x8};
+        diff_16b_neon_8x8,
+            NULL};
 
 /* SSD ***********************************************************************/
 #define SSE_SSD_16B_8PEL(src1, src2, shift, s00, s01, s02, s00a) \
@@ -191,15 +192,16 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
     return ssd;
 }
 
-const OAPV_FN_SSD oapv_tbl_ssd_16b_neon[1] =
+const oapv_fn_ssd_t oapv_tbl_ssd_16b_neon[2] =
     {
-        ssd_16b_neon_8x8};
+        ssd_16b_neon_8x8,
+            NULL};
 int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
 {
     int satd = 0;
     /* all 128 bit registers are named with a suffix mxnb, where m is the */
     /* number of n bits packed in the register                            */
-    
+
     int16x8_t src0_8x16b, src1_8x16b, src2_8x16b, src3_8x16b;
     int16x8_t src4_8x16b, src5_8x16b, src6_8x16b, src7_8x16b;
     int16x8_t pred0_8x16b, pred1_8x16b, pred2_8x16b, pred3_8x16b;
@@ -207,7 +209,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     int16x8_t out0_8x16b, out1_8x16b, out2_8x16b, out3_8x16b;
     int16x8_t out4_8x16b, out5_8x16b, out6_8x16b, out7_8x16b;
     int16x8x2_t out0_8x16bx2, out1_8x16bx2, out2_8x16bx2, out3_8x16bx2;
-    
+
     src0_8x16b = (vld1q_s16(&org[0]));
     org = org + s_org;
     src1_8x16b = (vld1q_s16(&org[0]));
@@ -224,35 +226,35 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     org = org + s_org;
     src7_8x16b = (vld1q_s16(&org[0]));
     org = org + s_org;
-    
+
     /**************** 8x8 horizontal transform *******************************/
     /***********************    8x8 16 bit Transpose  ************************/
-    
+
     out3_8x16b = vcombine_s16(vget_low_s16(src0_8x16b), vget_low_s16(src1_8x16b));
     out7_8x16b = vcombine_s16(vget_high_s16(src0_8x16b), vget_high_s16(src1_8x16b));
-    
+
     pred0_8x16b = vcombine_s16(vget_low_s16(src2_8x16b), vget_low_s16(src3_8x16b));
     src2_8x16b = vcombine_s16(vget_high_s16(src2_8x16b), vget_high_s16(src3_8x16b));
-    
+
     out2_8x16b = vcombine_s16(vget_low_s16(src4_8x16b), vget_low_s16(src5_8x16b));
     pred7_8x16b = vcombine_s16(vget_high_s16(src4_8x16b), vget_high_s16(src5_8x16b));
-    
+
     pred3_8x16b = vcombine_s16(vget_low_s16(src6_8x16b), vget_low_s16(src7_8x16b));
     src6_8x16b = vcombine_s16(vget_high_s16(src6_8x16b), vget_high_s16(src7_8x16b));
-    
-    
+
+
     out1_8x16b = vzip1q_s32(out3_8x16b, pred0_8x16b);
     out3_8x16b = vzip2q_s32(out3_8x16b, pred0_8x16b);
-    
+
     pred1_8x16b = vzip1q_s32(out2_8x16b, pred3_8x16b);
     pred3_8x16b = vzip2q_s32(out2_8x16b, pred3_8x16b);
-    
+
     out5_8x16b = vzip1q_s32(out7_8x16b, src2_8x16b);
     out7_8x16b = vzip2q_s32(out7_8x16b, src2_8x16b);
-    
+
     pred5_8x16b = vzip1q_s32(pred7_8x16b, src6_8x16b);
     pred7_8x16b = vzip2q_s32(pred7_8x16b, src6_8x16b);
-    
+
     out0_8x16b = vzip1q_s64(out1_8x16b,pred1_8x16b);
     out1_8x16b = vzip2q_s64(out1_8x16b,pred1_8x16b);
     out2_8x16b = vzip1q_s64(out3_8x16b,pred3_8x16b);
@@ -261,9 +263,9 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     out5_8x16b = vzip2q_s64(out5_8x16b,pred5_8x16b);
     out6_8x16b = vzip1q_s64(out7_8x16b,pred7_8x16b);
     out7_8x16b = vzip2q_s64(out7_8x16b,pred7_8x16b);
-    
+
     /**********************   8x8 16 bit Transpose End   *********************/
-    
+
     /* r0 + r1 */
     pred0_8x16b = vaddq_s16(out0_8x16b, out1_8x16b);
     /* r2 + r3 */
@@ -272,8 +274,8 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     pred4_8x16b = vaddq_s16(out4_8x16b, out5_8x16b);
     /* r6 + r7 */
     pred6_8x16b = vaddq_s16(out6_8x16b, out7_8x16b);
-    
-    
+
+
     /* r0 + r1 + r2 + r3 */
     pred1_8x16b = vaddq_s16(pred0_8x16b, pred2_8x16b);
     /* r4 + r5 + r6 + r7 */
@@ -282,7 +284,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     src0_8x16b = vaddq_s16(pred1_8x16b, pred5_8x16b);
     /* r0 + r1 + r2 + r3 - r4 - r5 - r6 - r7 */
     src4_8x16b = vsubq_s16(pred1_8x16b, pred5_8x16b);
-    
+
     /* r0 + r1 - r2 - r3 */
     pred1_8x16b = vsubq_s16(pred0_8x16b, pred2_8x16b);
     /* r4 + r5 - r6 - r7 */
@@ -291,7 +293,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     src2_8x16b = vaddq_s16(pred1_8x16b, pred5_8x16b);
     /* r0 + r1 - r2 - r3 - r4 - r5 + r6 + r7 */
     src6_8x16b = vsubq_s16(pred1_8x16b, pred5_8x16b);
-    
+
     /* r0 - r1 */
     pred0_8x16b = vsubq_s16(out0_8x16b, out1_8x16b);
     /* r2 - r3 */
@@ -300,7 +302,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     pred4_8x16b = vsubq_s16(out4_8x16b, out5_8x16b);
     /* r6 - r7 */
     pred6_8x16b = vsubq_s16(out6_8x16b, out7_8x16b);
-    
+
     /* r0 - r1 + r2 - r3 */
     pred1_8x16b = vaddq_s16(pred0_8x16b, pred2_8x16b);
     /* r4 - r5 + r6 - r7 */
@@ -309,7 +311,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     src1_8x16b = vaddq_s16(pred1_8x16b, pred5_8x16b);
     /* r0 - r1 + r2 - r3 - r4 + r5 - r6 + r7 */
     src5_8x16b = vsubq_s16(pred1_8x16b, pred5_8x16b);
-    
+
     /* r0 - r1 - r2 + r3 */
     pred1_8x16b = vsubq_s16(pred0_8x16b, pred2_8x16b);
     /* r4 - r5 - r6 + r7 */
@@ -318,8 +320,8 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     src3_8x16b = vaddq_s16(pred1_8x16b, pred5_8x16b);
     /* r0 - r1 - r2 + r3 - r4 + r5 + r6 - r7 */
     src7_8x16b = vsubq_s16(pred1_8x16b, pred5_8x16b);
-    
-    
+
+
     /***********************    8x8 16 bit Transpose  ************************/
     out3_8x16b = vzip1q_s16(src0_8x16b, src1_8x16b);
     pred0_8x16b = vzip1q_s16(src2_8x16b, src3_8x16b);
@@ -329,19 +331,19 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     src2_8x16b = vzip2q_s16(src2_8x16b, src3_8x16b);
     pred7_8x16b = vzip2q_s16(src4_8x16b, src5_8x16b);
     src6_8x16b = vzip2q_s16(src6_8x16b, src7_8x16b);
-    
+
     out1_8x16b = vzip1q_s32(out3_8x16b, pred0_8x16b);
     out3_8x16b = vzip2q_s32(out3_8x16b, pred0_8x16b);
-    
+
     pred1_8x16b = vzip1q_s32(out2_8x16b, pred3_8x16b);
     pred3_8x16b = vzip2q_s32(out2_8x16b, pred3_8x16b);
-    
+
     out5_8x16b = vzip1q_s32(out7_8x16b, src2_8x16b);
     out7_8x16b = vzip2q_s32(out7_8x16b, src2_8x16b);
-    
+
     pred5_8x16b = vzip1q_s32(pred7_8x16b, src6_8x16b);
     pred7_8x16b = vzip2q_s32(pred7_8x16b, src6_8x16b);
-    
+
     src0_8x16b = vzip1q_s64(out1_8x16b,pred1_8x16b);
     src1_8x16b = vzip2q_s64(out1_8x16b,pred1_8x16b);
     src2_8x16b = vzip1q_s64(out3_8x16b,pred3_8x16b);
@@ -350,7 +352,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     src5_8x16b = vzip2q_s64(out5_8x16b,pred5_8x16b);
     src6_8x16b = vzip1q_s64(out7_8x16b,pred7_8x16b);
     src7_8x16b = vzip2q_s64(out7_8x16b,pred7_8x16b);
-    
+
     /**********************   8x8 16 bit Transpose End   *********************/
     /**************** 8x8 horizontal transform *******************************/
     {
@@ -358,7 +360,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         int16x8_t out4a_8x16b, out5a_8x16b, out6a_8x16b, out7a_8x16b;
         int16x8_t tmp0_8x16b, tmp1_8x16b, tmp2_8x16b, tmp3_8x16b;
         int16x8_t tmp4_8x16b, tmp5_8x16b, tmp6_8x16b, tmp7_8x16b;
-        
+
         /************************* 8x8 Vertical Transform*************************/
         tmp0_8x16b = vcombine_s16(vget_high_s16(src0_8x16b), vcreate_s32(0));
         tmp1_8x16b = vcombine_s16(vget_high_s16(src1_8x16b), vcreate_s32(0));
@@ -368,9 +370,9 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         tmp5_8x16b = vcombine_s16(vget_high_s16(src5_8x16b), vcreate_s32(0));
         tmp6_8x16b = vcombine_s16(vget_high_s16(src6_8x16b), vcreate_s32(0));
         tmp7_8x16b = vcombine_s16(vget_high_s16(src7_8x16b), vcreate_s32(0));
-        
+
         /*************************First 4 pixels ********************************/
-        
+
         src0_8x16b = vmovl_s16(vget_low_s16(src0_8x16b));
         src1_8x16b = vmovl_s16(vget_low_s16(src1_8x16b));
         src2_8x16b = vmovl_s16(vget_low_s16(src2_8x16b));
@@ -379,7 +381,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         src5_8x16b = vmovl_s16(vget_low_s16(src5_8x16b));
         src6_8x16b = vmovl_s16(vget_low_s16(src6_8x16b));
         src7_8x16b = vmovl_s16(vget_low_s16(src7_8x16b));
-        
+
         /* r0 + r1 */
         pred0_8x16b = vaddq_s32(src0_8x16b, src1_8x16b);
         /* r2 + r3 */
@@ -388,7 +390,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         pred4_8x16b = vaddq_s32(src4_8x16b, src5_8x16b);
         /* r6 + r7 */
         pred6_8x16b = vaddq_s32(src6_8x16b, src7_8x16b);
-        
+
         /* r0 + r1 + r2 + r3 */
         pred1_8x16b = vaddq_s32(pred0_8x16b, pred2_8x16b);
         /* r4 + r5 + r6 + r7 */
@@ -397,7 +399,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         out0_8x16b = vaddq_s32(pred1_8x16b, pred5_8x16b);
         /* r0 + r1 + r2 + r3 - r4 - r5 - r6 - r7 */
         out4_8x16b = vsubq_s32(pred1_8x16b, pred5_8x16b);
-        
+
         /* r0 + r1 - r2 - r3 */
         pred1_8x16b = vsubq_s32(pred0_8x16b, pred2_8x16b);
         /* r4 + r5 - r6 - r7 */
@@ -406,7 +408,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         out2_8x16b = vaddq_s32(pred1_8x16b, pred5_8x16b);
         /* r0 + r1 - r2 - r3 - r4 - r5 + r6 + r7 */
         out6_8x16b = vsubq_s32(pred1_8x16b, pred5_8x16b);
-        
+
         /* r0 - r1 */
         pred0_8x16b = vsubq_s32(src0_8x16b, src1_8x16b);
         /* r2 - r3 */
@@ -415,7 +417,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         pred4_8x16b = vsubq_s32(src4_8x16b, src5_8x16b);
         /* r6 - r7 */
         pred6_8x16b = vsubq_s32(src6_8x16b, src7_8x16b);
-        
+
         /* r0 - r1 + r2 - r3 */
         pred1_8x16b = vaddq_s32(pred0_8x16b, pred2_8x16b);
         /* r4 - r5 + r6 - r7 */
@@ -424,7 +426,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         out1_8x16b = vaddq_s32(pred1_8x16b, pred5_8x16b);
         /* r0 - r1 + r2 - r3 - r4 + r5 - r6 + r7 */
         out5_8x16b = vsubq_s32(pred1_8x16b, pred5_8x16b);
-        
+
         /* r0 - r1 - r2 + r3 */
         pred1_8x16b = vsubq_s32(pred0_8x16b, pred2_8x16b);
         /* r4 - r5 - r6 + r7 */
@@ -433,9 +435,9 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         out3_8x16b = vaddq_s32(pred1_8x16b, pred5_8x16b);
         /* r0 - r1 - r2 + r3 - r4 + r5 + r6 - r7 */
         out7_8x16b = vsubq_s32(pred1_8x16b, pred5_8x16b);
-        
+
         /*************************First 4 pixels ********************************/
-        
+
         /**************************Next 4 pixels *******************************/
         src0_8x16b = vmovl_s16(vget_low_s16(tmp0_8x16b));
         src1_8x16b = vmovl_s16(vget_low_s16(tmp1_8x16b));
@@ -445,7 +447,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         src5_8x16b = vmovl_s16(vget_low_s16(tmp5_8x16b));
         src6_8x16b = vmovl_s16(vget_low_s16(tmp6_8x16b));
         src7_8x16b = vmovl_s16(vget_low_s16(tmp7_8x16b));
-        
+
         /* r0 + r1 */
         pred0_8x16b = vaddq_s32(src0_8x16b, src1_8x16b);
         /* r2 + r3 */
@@ -454,7 +456,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         pred4_8x16b = vaddq_s32(src4_8x16b, src5_8x16b);
         /* r6 + r7 */
         pred6_8x16b = vaddq_s32(src6_8x16b, src7_8x16b);
-        
+
         /* r0 + r1 + r2 + r3 */
         pred1_8x16b = vaddq_s32(pred0_8x16b, pred2_8x16b);
         /* r4 + r5 + r6 + r7 */
@@ -463,7 +465,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         out0a_8x16b = vaddq_s32(pred1_8x16b, pred5_8x16b);
         /* r0 + r1 + r2 + r3 - r4 - r5 - r6 - r7 */
         out4a_8x16b = vsubq_s32(pred1_8x16b, pred5_8x16b);
-        
+
         /* r0 + r1 - r2 - r3 */
         pred1_8x16b = vsubq_s32(pred0_8x16b, pred2_8x16b);
         /* r4 + r5 - r6 - r7 */
@@ -472,7 +474,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         out2a_8x16b = vaddq_s32(pred1_8x16b, pred5_8x16b);
         /* r0 + r1 - r2 - r3 - r4 - r5 + r6 + r7 */
         out6a_8x16b = vsubq_s32(pred1_8x16b, pred5_8x16b);
-        
+
         /* r0 - r1 */
         pred0_8x16b = vsubq_s32(src0_8x16b, src1_8x16b);
         /* r2 - r3 */
@@ -481,7 +483,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         pred4_8x16b = vsubq_s32(src4_8x16b, src5_8x16b);
         /* r6 - r7 */
         pred6_8x16b = vsubq_s32(src6_8x16b, src7_8x16b);
-        
+
         /* r0 - r1 + r2 - r3 */
         pred1_8x16b = vaddq_s32(pred0_8x16b, pred2_8x16b);
         /* r4 - r5 + r6 - r7 */
@@ -490,7 +492,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         out1a_8x16b = vaddq_s32(pred1_8x16b, pred5_8x16b);
         /* r0 - r1 + r2 - r3 - r4 + r5 - r6 + r7 */
         out5a_8x16b = vsubq_s32(pred1_8x16b, pred5_8x16b);
-        
+
         /* r0 - r1 - r2 + r3 */
         pred1_8x16b = vsubq_s32(pred0_8x16b, pred2_8x16b);
         /* r4 - r5 - r6 + r7 */
@@ -499,10 +501,10 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         out3a_8x16b = vaddq_s32(pred1_8x16b, pred5_8x16b);
         /* r0 - r1 - r2 + r3 - r4 + r5 + r6 - r7 */
         out7a_8x16b = vsubq_s32(pred1_8x16b, pred5_8x16b);
-        
+
         /**************************Next 4 pixels *******************************/
         /************************* 8x8 Vertical Transform*************************/
-        
+
         /****************************SATD calculation ****************************/
         src0_8x16b = vabsq_s32(out0_8x16b);
         src1_8x16b = vabsq_s32(out1_8x16b);
@@ -514,7 +516,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         src7_8x16b = vabsq_s32(out7_8x16b);
         s32* p = (s32*)&src0_8x16b;
         p[0] = 0;
-        
+
         satd = vaddvq_s32(src0_8x16b);
         satd += vaddvq_s32(src1_8x16b);
         satd += vaddvq_s32(src2_8x16b);
@@ -523,7 +525,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         satd += vaddvq_s32(src5_8x16b);
         satd += vaddvq_s32(src6_8x16b);
         satd += vaddvq_s32(src7_8x16b);
-        
+
         src0_8x16b = vabsq_s32(out0a_8x16b);
         src1_8x16b = vabsq_s32(out1a_8x16b);
         src2_8x16b = vabsq_s32(out2a_8x16b);
@@ -532,7 +534,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         src5_8x16b = vabsq_s32(out5a_8x16b);
         src6_8x16b = vabsq_s32(out6a_8x16b);
         src7_8x16b = vabsq_s32(out7a_8x16b);
-        
+
         satd += vaddvq_s32(src0_8x16b);
         satd += vaddvq_s32(src1_8x16b);
         satd += vaddvq_s32(src2_8x16b);
@@ -541,7 +543,7 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
         satd += vaddvq_s32(src5_8x16b);
         satd += vaddvq_s32(src6_8x16b);
         satd += vaddvq_s32(src7_8x16b);
-        
+
         satd = (satd + 2) >> 2;
         return satd;
     }

@@ -47,24 +47,23 @@ int  oapve_vlc_metadata(oapv_md_t* md, oapv_bs_t* bs);
 int  oapve_vlc_au_info(oapv_bs_t* bs, oapve_ctx_t* ctx, oapv_frms_t* frms, oapv_bs_t** bs_fi_pos);
 int  oapve_vlc_pbu_header(oapv_bs_t* bs, int pbu_type, int group_id);
 int  oapve_vlc_pbu_size(oapv_bs_t* bs, int pbu_size);
-void oapve_vlc_ac_coeff(oapve_ctx_t* ctx, oapve_core_t* core, oapv_bs_t* bs, s16* coef, int log2_w, int log2_h, int num_sig, int ch_type);
-int  oapve_vlc_dc_coeff(oapve_ctx_t* ctx, oapve_core_t* core, oapv_bs_t* bs, int log2_w, int dc_diff, int c);
+void oapve_vlc_ac_coeff(oapve_ctx_t* ctx, oapve_core_t* core, oapv_bs_t* bs, s16* coef, int num_sig, int ch_type);
+int  oapve_vlc_dc_coeff(oapve_ctx_t* ctx, oapve_core_t* core, oapv_bs_t* bs, int dc_diff, int c);
 
-int  oapvd_vlc_au_size(oapv_bs_t* bs, u32* size);
-int  oapvd_vlc_pbu_size(oapv_bs_t* bs, u32* size);
+int  oapvd_vlc_au_size(oapv_bs_t* bs);
+int  oapvd_vlc_pbu_size(oapv_bs_t* bs);
 int  oapvd_vlc_pbu_header(oapv_bs_t* bs, oapv_pbuh_t* pbuh);
 int  oapvd_vlc_au_info(oapv_bs_t* bs, oapv_aui_t* aui);
 
 int  oapvd_vlc_frame_size(oapv_bs_t* bs);
 int  oapvd_vlc_frame_header(oapv_bs_t* bs, oapv_fh_t* fh);
 int  oapvd_vlc_frame_info(oapv_bs_t* bs, oapv_fi_t *fi);
-int  oapvd_vlc_tiles(oapvd_ctx_t* ctx, oapv_bs_t* bs);
-int  oapvd_store_tile_data(oapvd_ctx_t* ctx, oapv_bs_t* bs);
-int  oapvd_vlc_tile_data(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, int x, int y, int tile_idx, int c);
+int  oapvd_vlc_tile_size(oapv_bs_t* bs);
+int  oapvd_vlc_tile_header(oapv_bs_t* bs, oapvd_ctx_t* ctx, oapv_th_t* th);
 int  oapvd_vlc_tile_dummy_data(oapv_bs_t* bs);
 int  oapvd_vlc_run_length_cc(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, s16* coef, int log2_w, int log2_h, int ch_type);
 int  oapvd_vlc_metadata(oapv_bs_t* bs, u32 pbu_size, oapvm_t mid, int group_id);
 int  oapvd_vlc_filler(oapv_bs_t* bs, u32 filler_size);
-int  oapvd_vlc_dc_coeff(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, int log2_w, s16* dc_diff, int c);
-int  oapvd_vlc_ac_coeff(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, s16* coef, int log2_w, int log2_h, int ch_type);
+int  oapvd_vlc_dc_coeff(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, s16* dc_diff, int c);
+int  oapvd_vlc_ac_coeff(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, s16* coef, int c);
 #endif /* _OAPV_VLC_H_ */

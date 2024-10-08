@@ -310,8 +310,6 @@ void oapv_bsr_init(oapv_bs_t * bs, u8 * buf, int size, oapv_bs_fn_flush_t fn_flu
     bs->fn_flush = (fn_flush == NULL)? bsr_flush : fn_flush;
 }
 
-
-
 int oapv_bsr_clz_in_code(u32 code)
 {
     int clz, bits4, shift;
@@ -333,10 +331,17 @@ int oapv_bsr_clz_in_code(u32 code)
 
 void oapv_bsr_align8(oapv_bs_t* bs)
 {
-    u32 t0;
+    /*
     while (!bsr_is_align8(bs)) {
-        oapv_bsr_read1(bs, &t0);
+        oapv_bsr_read1(bs);
     }
+    */
+    int size;
+
+    size = bs->leftbits & 0x7;
+
+    bs->code    <<= size;
+    bs->leftbits -= size;
 }
 
 void oapv_bsr_skip(oapv_bs_t* bs, int size)
@@ -396,7 +401,23 @@ void oapv_bsr_peek(oapv_bs_t* bs, u32 * val, int size)
     *val = code;
 }
 
+void* oapv_bsr_sink(oapv_bs_t* bs)
+{
+    oapv_assert_rv(bs->cur + BSW_GET_SINK_BYTE(bs) <= bs->end, NULL);
+    oapv_assert_rv((bs->leftbits & 7) == 0, NULL);
+    bs->cur = bs->cur - (bs->leftbits >> 3);
+    bs->code = 0;
+    bs->leftbits = 0;
+    return (void*)bs->cur;
+}
 
+void oapv_bsr_move(oapv_bs_t* bs, u8* pos)
+{
+    oapv_assert(pos >= bs->cur && pos <= bs->end);
+    bs->code = 0;
+    bs->leftbits = 0;
+    bs->cur = pos;
+}
 
 #if TRACE_HLS
 void oapv_bsr_read_trace(oapv_bs_t * bs, u32 * val, char * name, int size)
@@ -433,15 +454,15 @@ void oapv_bsr_read_trace(oapv_bs_t * bs, u32 * val, char * name, int size)
     }
 }
 
-void oapv_bsr_read1_trace(oapv_bs_t * bs, u32 * val, char * name)
+int oapv_bsr_read1_trace(oapv_bs_t * bs, char * name)
 {
     int code;
     if (bs->leftbits == 0)
     {
         if (bs->fn_flush(bs, 4))
         {
-            //oapv_trace("already reached the end of bitstream\n");  /* should be updated */
-            return;
+            oapv_trace("already reached the end of bitstream\n");  /* should be updated */
+            return -1;
         }
     }
     code = (int)(bs->code >> 31);
@@ -449,24 +470,24 @@ void oapv_bsr_read1_trace(oapv_bs_t * bs, u32 * val, char * name)
     bs->code <<= 1;
     bs->leftbits -= 1;
 
-    *val = code;
     if (name)
     {
-        OAPV_TRACE_STR(name + 1);
+        OAPV_TRACE_STR(name);
         OAPV_TRACE_STR(" ");
-        OAPV_TRACE_INT(*val);
+        OAPV_TRACE_INT(code);
         OAPV_TRACE_STR("\n");
     }
     else
     {
         OAPV_TRACE_STR("0");
         OAPV_TRACE_STR(" ");
-        OAPV_TRACE_INT(*val);
+        OAPV_TRACE_INT(code);
         OAPV_TRACE_STR("\n");
     }
+    return code;
 }
 #else
-void oapv_bsr_read(oapv_bs_t * bs, u32 * val, int size)
+u32 oapv_bsr_read(oapv_bs_t * bs, int size)
 {
     u32 code = 0;
 
@@ -478,27 +499,26 @@ void oapv_bsr_read(oapv_bs_t * bs, u32 * val, int size)
         size -= bs->leftbits;
         if (bs->fn_flush(bs, 4))
         {
-            //oapv_trace("already reached the end of bitstream\n");  /* should be updated */
-            *val = (u32)-1;
-            return;
+            oapv_trace("already reached the end of bitstream\n");  /* should be updated */
+            return (u32)(-1);
         }
     }
     code |= bs->code >> (32 - size);
 
     bsr_skip_code(bs, size);
 
-    *val = code;
+    return code;
 }
 
-void oapv_bsr_read1(oapv_bs_t * bs, u32 * val)
+int oapv_bsr_read1(oapv_bs_t * bs)
 {
     int code;
     if (bs->leftbits == 0)
     {
         if (bs->fn_flush(bs, 4))
         {
-            //oapv_trace("already reached the end of bitstream\n");  /* should be updated */
-            return;
+            oapv_trace("already reached the end of bitstream\n");  /* should be updated */
+            return -1;
         }
     }
     code = (int)(bs->code >> 31);
@@ -506,7 +526,7 @@ void oapv_bsr_read1(oapv_bs_t * bs, u32 * val)
     bs->code <<= 1;
     bs->leftbits -= 1;
 
-    *val = code;
+    return code;
 }
 #endif
 

@@ -290,6 +290,7 @@ oapv_imgb_t * imgb_create(int w, int h, int cs)
 
     for(i = 0; i < imgb->np; i++)
     {
+        // width and height need to be aligned to macroblock size
         imgb->aw[i] = ALIGN_VAL(imgb->w[i], OAPV_MB_W);
         imgb->s[i] = imgb->aw[i] * bd;
         imgb->ah[i] = ALIGN_VAL(imgb->h[i], OAPV_MB_H);
@@ -436,7 +437,6 @@ static int imgb_write(char * fname, oapv_imgb_t * imgb)
 {
     unsigned char * p8;
     int             i, j, bd;
-    int             cs_w_off, cs_h_off;
     FILE          * fp;
 
     int chroma_format = OAPV_CS_GET_FORMAT(imgb->cs);
@@ -452,15 +452,11 @@ static int imgb_write(char * fname, oapv_imgb_t * imgb)
                           chroma_format == OAPV_CF_YCBCR444 || chroma_format == OAPV_CF_YCBCR4444))
     {
         bd = 1;
-        cs_w_off = 2;
-        cs_h_off = 2;
     }
     else if(bit_depth >= 10 && bit_depth <= 14 && (chroma_format == OAPV_CF_YCBCR400 || chroma_format == OAPV_CF_YCBCR420 || chroma_format == OAPV_CF_YCBCR422 ||
                                                    chroma_format == OAPV_CF_YCBCR444 || chroma_format == OAPV_CF_YCBCR4444))
     {
         bd = 2;
-        cs_w_off = 2;
-        cs_h_off = 2;
     }
     else if (bit_depth >= 10 && chroma_format == OAPV_CF_PLANAR2)
     {

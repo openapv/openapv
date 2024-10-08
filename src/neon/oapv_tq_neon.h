@@ -39,21 +39,10 @@
 
 #if ARM_NEON
 
-/* Buffer Alignement */
-#if defined(_WIN32) && !defined(__GNUC__)
-#define DECLARE_ALIGNED(var, n) __declspec(align(n)) var
-#else
-#define DECLARE_ALIGNED(var, n) var __attribute__((aligned(n)))
-#endif
-
-#define ALIGNED_16(var) DECLARE_ALIGNED(var, 16)
-#define ALIGNED_32(var) DECLARE_ALIGNED(var, 32)
-#define ALIGNED_128(var) DECLARE_ALIGNED(var, 128)
-
-extern const oapv_fn_tx_t oapv_tbl_fn_txb_neon[1];
-
-extern const oapv_fn_quant_t oapv_tbl_quantb_neon[1];
-extern const oapv_fn_iquant_t oapv_tbl_fn_iquant_neon[1] ;
+extern const oapv_fn_tx_t oapv_tbl_fn_txb_neon[2];
+extern const oapv_fn_quant_t oapv_tbl_quantb_neon[2];
+extern const oapv_fn_iquant_t oapv_tbl_fn_iquant_neon[2];
+extern const oapv_fn_itx_t oapv_tbl_fn_itx_neon[2];
 
 #define CALCU_2x8(c0, c1, d0, d1)  \
    v0 = _mm256_madd_epi16(s0, c0); \
@@ -135,8 +124,6 @@ extern const oapv_fn_iquant_t oapv_tbl_fn_iquant_neon[1] ;
    d5 = _mm256_srai_epi32(d5, shift);                                        \
    d6 = _mm256_srai_epi32(d6, shift);                                        \
    d7 = _mm256_srai_epi32(d7, shift)
-
-extern const oapv_fn_itx_t oapv_tbl_fn_itx_neon[1];
 
 #endif // ARM_NEON
 

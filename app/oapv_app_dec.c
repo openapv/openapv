@@ -322,7 +322,7 @@ static void print_stat_frm(oapvd_stat_t* stat, oapv_frms_t* frms, oapvm_t mid, A
 int main(int argc, const char** argv)
 {
     ARGS_PARSER*     args;
-    ARGS_VAR*        args_var;
+    ARGS_VAR*        args_var = NULL;
     unsigned char*   bs_buf = NULL;
     oapvd_t          did    = NULL;
     oapvm_t          mid    = NULL;
@@ -334,11 +334,10 @@ int main(int argc, const char** argv)
     oapv_frm_t*      frm    = NULL;
     oapv_au_info_t   aui;
     oapvd_stat_t     stat;
-    int              ret = 0;
+    int              i, ret = 0;
     oapv_clk_t       clk_beg, clk_tot;
     int              au_cnt, frm_cnt[OAPV_MAX_NUM_FRAMES];
     int              read_size, bs_buf_size = 0;
-    int              i, w, h;
     FILE*            fp_bs  = NULL;
     int              is_y4m = 0;
     char*            errstr = NULL;
@@ -554,9 +553,6 @@ int main(int argc, const char** argv)
                 else {
                     imgb_o = frm->imgb;
                 }
-
-                w = imgb_o->w[0];
-                h = imgb_o->h[0];
 
                 if(strlen(args_var->fname_out)) {
                     if(frm_cnt[i] == 0 && is_y4m) {

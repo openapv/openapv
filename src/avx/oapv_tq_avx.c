@@ -96,9 +96,10 @@ static void oapv_tx_pb8b_avx(s16 *src, s16 *dst, int shift, int line)
     _mm_store_si128((__m128i *)(dst + 7 * line), _mm256_extracti128_si256(d1, 1));
 }
 
-const oapv_fn_tx_t oapv_tbl_txb_avx[1] =
+const oapv_fn_tx_t oapv_tbl_txb_avx[2] =
 {
     oapv_tx_pb8b_avx,
+        NULL
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -281,19 +282,20 @@ static void oapv_itx_pb8b_avx(s16* src, s16* dst, int shift, int line)
     }
 }
 
-const oapv_fn_itx_t oapv_tbl_fn_itx_avx[1] =
+const oapv_fn_itx_t oapv_tbl_fn_itx_avx[2] =
 {
     oapv_itx_pb8b_avx,
+        NULL
 };
 
-static int oapv_quant_nnz_avx(u8 qp, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W], s16 *coef, int log2_block_w, int log2_block_h,
+static int oapv_quant_nnz_avx(u8 qp, int q_matrix[OAPV_BLK_H * OAPV_BLK_W], s16 *coef, int log2_w, int log2_h,
                              u16 scale, int ch_type, int bit_depth, int deadzone_offset)
 {
     int nnz = 0;
     s32 offset;
     int shift;
     int tr_shift;
-    int log2_size = (log2_block_w + log2_block_h) >> 1;
+    int log2_size = (log2_w + log2_h) >> 1;
 
     tr_shift = MAX_TX_DYNAMIC_RANGE - bit_depth - log2_size;
     shift = QUANT_SHIFT + tr_shift + (qp / 6);
@@ -301,7 +303,7 @@ static int oapv_quant_nnz_avx(u8 qp, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W], 
 
     __m256i offset_1 = _mm256_set1_epi32(offset);
 
-    int pixels = (1 << (log2_block_w + log2_block_h));
+    int pixels = (1 << (log2_w + log2_h));
     int i;
     __m256i shuffle = _mm256_setr_epi8(
         0, 1, 4, 5, 8, 9, 12, 13,
@@ -342,13 +344,14 @@ static int oapv_quant_nnz_avx(u8 qp, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W], 
     return nnz;
 }
 
-const oapv_fn_quant_t oapv_tbl_quantb_avx[1] =
+const oapv_fn_quant_t oapv_tbl_quantb_avx[2] =
 {
     oapv_quant_nnz_avx,
+        NULL
 };
 
 
-static void oapv_dquant_avx(s16 *coef, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W], int log2_w, int log2_h, int scale, s8 shift)
+static void oapv_dquant_avx(s16 *coef, int q_matrix[OAPV_BLK_H * OAPV_BLK_W], int log2_w, int log2_h, int scale, s8 shift)
 {
     int i;
     int pixels = (1 << (log2_w + log2_h));
@@ -406,7 +409,8 @@ static void oapv_dquant_avx(s16 *coef, int q_matrix[OAPV_BLOCK_H * OAPV_BLOCK_W]
         }
     }
 }
-const oapv_fn_iquant_t oapv_tbl_fn_iquant_avx[1] =
+const oapv_fn_iquant_t oapv_tbl_fn_iquant_avx[2] =
     {
         oapv_dquant_avx,
+            NULL,
 };

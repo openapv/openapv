@@ -32,13 +32,16 @@
 #ifndef _OAPV_SAD_SSE_H_
 #define _OAPV_SAD_SSE_H_
 
-#include "oapv_port.h"
-#include "oapv_sad.h"
+#include "oapv_def.h"
+
 #if X86_SSE
-extern const OAPV_FN_SAD oapv_tbl_sad_16b_sse[1];
-extern const OAPV_FN_SSD oapv_tbl_ssd_16b_sse[1];
-extern const OAPV_FN_DIFF oapv_tbl_diff_16b_sse[1];
+extern const oapv_fn_sad_t oapv_tbl_sad_16b_sse[2];
+extern const oapv_fn_ssd_t oapv_tbl_ssd_16b_sse[2];
+extern const oapv_fn_diff_t oapv_tbl_diff_16b_sse[2];
 int oapv_sad_16b_sse_8x2n(int w, int h, void * src1, void * src2, int s_src1, int s_src2, int bit_depth);
 int oapv_dc_removed_had8x8_sse(pel* org, int s_org);
+
 #endif /* X86_SSE */
+
 #endif /* _OAPV_SAD_SSE_H_ */
+

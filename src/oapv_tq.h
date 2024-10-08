@@ -40,18 +40,18 @@
 #if ENABLE_ENCODER
 ///////////////////////////////////////////////////////////////////////////////
 
-extern const oapv_fn_tx_t oapv_tbl_fn_tx[1];
+extern const oapv_fn_tx_t oapv_tbl_fn_tx[2];
 
-extern const oapv_fn_quant_t oapv_tbl_fn_quant[1];
-extern const oapv_fn_quant_t_no_qp_matrix oapv_tbl_fn_quant_no_qp_matrix[1];
-extern const oapv_fn_iquant_t_no_qp_matrix oapv_tbl_fn_iquant_no_qp_matrix[1];
+extern const oapv_fn_quant_t oapv_tbl_fn_quant[2];
+extern const oapv_fn_quant_t_no_qp_matrix oapv_tbl_fn_quant_no_qp_matrix[2];
+extern const oapv_fn_iquant_t_no_qp_matrix oapv_tbl_fn_iquant_no_qp_matrix[2];
 
 extern const int oapv_quant_scale[6];
-void oapv_trans(oapve_ctx_t* ctx, s16 * coef, int log2_block_w, int log2_block_h, int bit_depth);
+void oapv_trans(oapve_ctx_t* ctx, s16 * coef, int log2_w, int log2_h, int bit_depth);
 void oapv_tx_pb8b(s16* src, s16* dst, int shift, int line);
 
-int    oapv_quant_nnz(u8 qp, int q_matrix[OAPV_BLOCK_H*OAPV_BLOCK_W], s16* coef,
-    int log2_block_w, int log2_block_h, u16 scale, int ch_type, int bit_depth, int deadzone_offset);
+int    oapv_quant_nnz(u8 qp, int q_matrix[OAPV_BLK_H*OAPV_BLK_W], s16* coef,
+    int log2_w, int log2_h, u16 scale, int ch_type, int bit_depth, int deadzone_offset);
 
 ///////////////////////////////////////////////////////////////////////////////
 // end of encoder code
@@ -74,10 +74,10 @@ int    oapv_quant_nnz(u8 qp, int q_matrix[OAPV_BLOCK_H*OAPV_BLOCK_W], s16* coef,
 #define ITX_CLIP_32(x) \
     (s32)(((x)<=MIN_TX_VAL_32)? MIN_TX_VAL_32: (((x)>=MAX_TX_VAL_32)? MAX_TX_VAL_32: (x)))
 
-extern const oapv_fn_itx_t oapv_tbl_fn_itx[1];
+extern const oapv_fn_itx_t oapv_tbl_fn_itx[2];
 
-extern const oapv_fn_iquant_t oapv_tbl_fn_iquant[1];
-void oapv_itdq_block(const oapv_fn_itx_t *fn_itx, const oapv_fn_iquant_t *fn_iquant, int q_matrix[OAPV_BLOCK_H*OAPV_BLOCK_W],
+extern const oapv_fn_iquant_t oapv_tbl_fn_iquant[2];
+void oapv_itdq_block(const oapv_fn_itx_t *fn_itx, const oapv_fn_iquant_t *fn_iquant, int q_matrix[OAPV_BLK_H*OAPV_BLK_W],
     s16* coef, int log2_w, int log2_h, int scale, int bit_depth, int qp);
 
 void oapv_itrans(const oapv_fn_itx_t* fn_itx, s16* coef, int log2_w, int log2_h, int bit_depth);

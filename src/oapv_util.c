@@ -29,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "oapv_def.h"
+#include "oapv_util.h"
 #include <math.h>
 
 #if ENC_DEC_TRACE
@@ -356,7 +356,7 @@ static unsigned long long __xgetbv(unsigned int i)
 #endif
 #define GET_CPU_INFO(A,B) ((B[((A >> 5) & 0x03)] >> (A & 0x1f)) & 1)
 
-static int check_cpu_info()
+int oapv_check_cpu_info_x86()
 {
     int support_sse  = 0;
     int support_avx  = 0;
@@ -368,85 +368,25 @@ static int check_cpu_info()
     if (id_cnt >= 1)
     {
         __cpuid(cpu_info, 1);
-        support_sse |= GET_CPU_INFO(OAPV_CPU_INFO_SSE41, cpu_info);
+        support_sse = GET_CPU_INFO(OAPV_CPU_INFO_SSE41, cpu_info);
         int os_use_xsave = GET_CPU_INFO(OAPV_CPU_INFO_OSXSAVE, cpu_info);
         int cpu_support_avx = GET_CPU_INFO(OAPV_CPU_INFO_AVX, cpu_info);
 
         if (os_use_xsave && cpu_support_avx)
         {
             unsigned long long xcr_feature_mask = __xgetbv(_XCR_XFEATURE_ENABLED_MASK);
-            support_avx = (xcr_feature_mask & 0x6) || 0;
+            support_avx = ((xcr_feature_mask & 0x6) || 0)? 1: 0;
             if (id_cnt >= 7)
             {
                 __cpuid(cpu_info, 7);
-                support_avx2 = support_avx && GET_CPU_INFO(OAPV_CPU_INFO_AVX2, cpu_info);
+                support_avx2 = (support_avx && GET_CPU_INFO(OAPV_CPU_INFO_AVX2, cpu_info))? 1: 0;
             }
         }
     }
 
-    return (support_sse << 1) | support_avx | (support_avx2 << 2);
+    return ((support_avx2 << 2) | (support_avx << 1) | (support_sse << 0));
 }
 #endif
-
-int oapve_platform_init_extention(oapve_ctx_t * ctx)
-{
-#if X86_SSE
-    int check_cpu, support_sse, support_avx, support_avx2;
-
-    check_cpu = check_cpu_info();
-    support_sse  = (check_cpu >> 1) & 1;
-    support_avx  = check_cpu & 1;
-    support_avx2 = (check_cpu >> 2) & 1;
-
-    if (support_avx2)
-    {
-        oapv_func_sad               = oapv_tbl_sad_16b_avx;
-        oapv_func_ssd               = oapv_tbl_ssd_16b_sse;
-        oapv_func_diff              = oapv_tbl_diff_16b_sse;
-        ctx->fn_itx                 = oapv_tbl_fn_itx_avx;
-        ctx->fn_txb                 = oapv_tbl_txb_avx;
-        ctx->fn_quantb              = oapv_tbl_quantb_avx;
-        ctx->fn_iquant              = oapv_tbl_fn_iquant_avx;
-        ctx->fn_had8x8              = oapv_dc_removed_had8x8_sse;
-    }
-    else if (support_sse)
-    {
-        oapv_func_sad               = oapv_tbl_sad_16b_sse;
-        oapv_func_ssd               = oapv_tbl_ssd_16b_sse;
-        oapv_func_diff              = oapv_tbl_diff_16b_sse;
-        ctx->fn_itx                 = oapv_tbl_fn_itx;
-        ctx->fn_txb                 = oapv_tbl_fn_tx;
-        ctx->fn_quantb              = oapv_tbl_fn_quant;
-        ctx->fn_iquant              = oapv_tbl_fn_iquant;
-        ctx->fn_had8x8              = oapv_dc_removed_had8x8_sse;
-    }
-    else
-#endif
-#if ARM_NEON
-    {
-        oapv_func_sad               = oapv_tbl_sad_16b_neon;
-        oapv_func_ssd               = oapv_tbl_ssd_16b_neon;
-        oapv_func_diff              = oapv_tbl_diff_16b_neon;
-        ctx->fn_itx                 = oapv_tbl_fn_itx;
-        ctx->fn_txb                 = oapv_tbl_fn_txb_neon;
-        ctx->fn_quantb              = oapv_tbl_quantb_neon;
-        ctx->fn_iquant              = oapv_tbl_fn_iquant;
-        ctx->fn_had8x8              = oapv_dc_removed_had8x8;
-    }
-#else
-    {
-        oapv_func_sad               = oapv_tbl_sad_16b;
-        oapv_func_ssd               = oapv_tbl_ssd_16b;
-        oapv_func_diff              = oapv_tbl_diff_16b;
-        ctx->fn_itx                 = oapv_tbl_fn_itx;
-        ctx->fn_txb                 = oapv_tbl_fn_tx;
-        ctx->fn_quantb              = oapv_tbl_fn_quant;
-        ctx->fn_had8x8              = oapv_dc_removed_had8x8;
-
-    }
-#endif
-    return OAPV_OK;
-}
 
 int oapve_create_bs_buf(oapve_ctx_t  * ctx, int max_bs_buf_size)
 {
@@ -470,40 +410,3 @@ int oapve_delete_bs_buf(oapve_ctx_t  * ctx)
     return OAPV_OK;
 }
 
-void oapvd_platform_init_extention(oapvd_ctx_t * ctx)
-{
-#if X86_SSE
-    int check_cpu, support_sse, support_avx, support_avx2;
-
-    check_cpu = check_cpu_info();
-    support_sse  = (check_cpu >> 1) & 1;
-    support_avx  = check_cpu & 1;
-    support_avx2 = (check_cpu >> 2) & 1;
-
-    if (support_avx2)
-    {
-        ctx->fn_itx = oapv_tbl_fn_itx_avx;
-        ctx->fn_iquant = oapv_tbl_fn_iquant_avx;
-    }
-    else if (support_sse)
-    {
-        ctx->fn_itx = oapv_tbl_fn_itx;
-        ctx->fn_iquant = oapv_tbl_fn_iquant;
-    }
-    else
-#endif
-#if ARM_NEON
-    {
-        //oapv_func_sad = oapv_tbl_sad_16b_neon;
-        oapv_func_ssd = oapv_tbl_ssd_16b_neon;
-        oapv_func_diff = oapv_tbl_diff_16b_neon;
-        ctx->fn_itx = oapv_tbl_fn_itx;
-        ctx->fn_iquant = oapv_tbl_fn_iquant;
-    }
-#else
-    {
-        ctx->fn_itx = oapv_tbl_fn_itx;
-        ctx->fn_iquant = oapv_tbl_fn_iquant;
-    }
-#endif
-}

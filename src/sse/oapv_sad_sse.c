@@ -29,8 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "oapv_def.h"
-#include <math.h>
+#include "oapv_sad_sse.h"
 
 #if X86_SSE
 
@@ -58,9 +57,9 @@ int oapv_sad_16b_sse_8x2n(int w, int h, void * src1, void * src2, int s_src1, in
     int s_src1_t2 = s_src1 * 2;
     int s_src2_t2 = s_src2 * 2;
 
-    assert(bit_depth <= 14);
-    assert(!(w & 7)); /* width has to be multiple of 4  */
-    assert(!(h & 3)); /* height has to be multiple of 4 */
+    oapv_assert(bit_depth <= 14);
+    oapv_assert(!(w & 7)); /* width has to be multiple of 4  */
+    oapv_assert(!(h & 3)); /* height has to be multiple of 4 */
 
     pu2_inp = src1;
     pu2_ref = src2;
@@ -108,9 +107,10 @@ int oapv_sad_16b_sse_8x2n(int w, int h, void * src1, void * src2, int s_src1, in
     return (sad);
 }
 
-const OAPV_FN_SAD oapv_tbl_sad_16b_sse[1] =
+const oapv_fn_sad_t oapv_tbl_sad_16b_sse[2] =
 {
     oapv_sad_16b_sse_8x2n,
+        NULL
 };
 
 /* DIFF **********************************************************************/
@@ -138,9 +138,11 @@ static void diff_16b_sse_8x8(int w, int h, void * src1, void * src2, int s_src1,
     SSE_DIFF_16B_8PEL(s1 + s_src1*6, s2 + s_src2*6, diff + s_diff*6, m07, m08, m09);
     SSE_DIFF_16B_8PEL(s1 + s_src1*7, s2 + s_src2*7, diff + s_diff*7, m10, m11, m12);
 }
-const OAPV_FN_DIFF oapv_tbl_diff_16b_sse[1] =
+
+const oapv_fn_diff_t oapv_tbl_diff_16b_sse[2] =
 {
-      diff_16b_sse_8x8
+      diff_16b_sse_8x8,
+        NULL
 };
 
 /* SSD ***********************************************************************/
@@ -191,9 +193,10 @@ static s64 ssd_16b_sse_8x8(int w, int h, void * src1, void * src2, int s_src1, i
     return ssd;
 }
 
-const OAPV_FN_SSD oapv_tbl_ssd_16b_sse[1] =
+const oapv_fn_ssd_t oapv_tbl_ssd_16b_sse[2] =
 {
-    ssd_16b_sse_8x8
+    ssd_16b_sse_8x8,
+        NULL
 };
 
 int oapv_dc_removed_had8x8_sse(pel* org, int s_org)

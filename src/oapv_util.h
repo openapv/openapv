@@ -32,6 +32,8 @@
 #ifndef __OAPV_UTIL_H__
 #define __OAPV_UTIL_H__
 
+#include "oapv_def.h"
+
 
 #define oapv_max(a, b) (((a) > (b)) ? (a) : (b))
 #define oapv_min(a, b) (((a) < (b)) ? (a) : (b))
@@ -131,12 +133,14 @@ typedef struct
 void oapv_imgb_set_md5(oapv_imgb_t *imgb);
 void oapv_block_copy(s16 *src, int src_stride, s16 *dst, int dst_stride, int log2_copy_w, int log2_copy_h);
 
-int  oapve_platform_init_extention(oapve_ctx_t *ctx);
 int  oapve_create_bs_buf(oapve_ctx_t *ctx, int max_bs_buf_size);
 int  oapve_delete_bs_buf(oapve_ctx_t *ctx);
-void oapvd_platform_init_extention(oapvd_ctx_t *ctx);
 
 int oapv_set_md5_pld(oapvm_t mid, int group_id, oapv_imgb_t *rec);
+
+#if X86_SSE
+int oapv_check_cpu_info_x86();
+#endif
 
 #endif /* __OAPV_UTIL_H__ */
 
