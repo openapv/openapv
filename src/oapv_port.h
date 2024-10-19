@@ -107,8 +107,8 @@ static __inline void oapv_mset_16b(s16* dst, s16 v, int cnt)
  *****************************************************************************/
 void oapv_trace0(char* filename, int line, const char* fmt, ...);
 void oapv_trace_line(char* pre);
-#ifndef AVP1_TRACE
-#define AVP1_TRACE 0
+#ifndef OAPV_TRACE
+#define OAPV_TRACE 0
 #endif
 
 /* trace function */
@@ -199,77 +199,5 @@ void oapv_trace_line(char* pre);
 #define ALIGNED_16(var)  DECLARE_ALIGNED(var, 16)
 #define ALIGNED_32(var)  DECLARE_ALIGNED(var, 32)
 #define ALIGNED_128(var) DECLARE_ALIGNED(var, 128)
-
-/* For debugging (START) */
-#define ENC_DEC_TRACE    0
-#if ENC_DEC_TRACE
-#if defined(__GNUC__)
-#pragma message "warning! syntax trace is on"
-#else
-#pragma message("warning! syntax trace is on")
-#endif
-#endif
-
-#if ENC_DEC_TRACE
-#define TRACE_REMOVE_COUNTER 0  // Remove trace counter
-#define TRACE_HLS            1  // Trace Header.
-#define TRACE_COEF_BIN       0
-
-extern FILE* fp_trace;
-extern int   fp_trace_print;
-extern int   fp_trace_counter;
-
-#define OAPV_TRACE_SET(A)  \
-    {                      \
-        fp_trace_print = A \
-    }
-#define OAPV_TRACE_STR(STR)               \
-    {                                     \
-        if(fp_trace_print) {              \
-            fprintf(fp_trace, "%s", STR); \
-            fflush(fp_trace);             \
-        }                                 \
-    }
-#define OAPV_TRACE_DOUBLE(DOU)            \
-    {                                     \
-        if(fp_trace_print) {              \
-            fprintf(fp_trace, "%g", DOU); \
-            fflush(fp_trace);             \
-        }                                 \
-    }
-#define OAPV_TRACE_INT(INT)                \
-    {                                      \
-        if(fp_trace_print) {               \
-            fprintf(fp_trace, "%d ", INT); \
-            fflush(fp_trace);              \
-        }                                  \
-    }
-#define OAPV_TRACE_INT_HEX(INT)              \
-    {                                        \
-        if(fp_trace_print) {                 \
-            fprintf(fp_trace, "0x%x ", INT); \
-            fflush(fp_trace);                \
-        }                                    \
-    }
-#if TRACE_REMOVE_COUNTER
-#define OAPV_TRACE_COUNTER
-#else
-#define OAPV_TRACE_COUNTER              \
-    OAPV_TRACE_INT(fp_trace_counter++); \
-    OAPV_TRACE_STR("\t")
-#endif
-#define OAPV_TRACE_FLUSH \
-    if(fp_trace_print)   \
-    fflush(fp_trace)
-#else
-#define OAPV_TRACE_SET(A)
-#define OAPV_TRACE_STR(str)
-#define OAPV_TRACE_DOUBLE(DOU)
-#define OAPV_TRACE_INT(INT)
-#define OAPV_TRACE_INT_HEX(INT)
-#define OAPV_TRACE_COUNTER
-#define OAPV_TRACE_FLUSH
-#endif
-/* For debugging (END) */
 
 #endif /* _OAPV_PORT_H_ */

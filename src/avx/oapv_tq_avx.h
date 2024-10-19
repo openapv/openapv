@@ -132,7 +132,8 @@
 extern const oapv_fn_tx_t oapv_tbl_txb_avx[2];
 extern const oapv_fn_quant_t oapv_tbl_quantb_avx[2];
 extern const oapv_fn_itx_t oapv_tbl_fn_itx_avx[2];
-extern const oapv_fn_iquant_t oapv_tbl_fn_iquant_avx[2];
+extern const oapv_fn_dquant_t oapv_tbl_fn_dquant_avx[2];
+extern const oapv_fn_itx_adj_t oapv_tbl_fn_itx_adj_avx[2];
 #endif /* X86_SSE */
 
 

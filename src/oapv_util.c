@@ -32,12 +32,6 @@
 #include "oapv_util.h"
 #include <math.h>
 
-#if ENC_DEC_TRACE
-FILE *fp_trace;
-int fp_trace_print = 0;
-int fp_trace_counter = 0;
-#endif
-
 /* MD5 functions */
 #define MD5FUNC(f, w, x, y, z, msg1, s,msg2 )  ( w += f(x, y, z) + msg1 + msg2,  w = w<<s | w>>(32-s),  w += x )
 #define FF(x, y, z) (z ^ (x & (y ^ z)))
@@ -388,25 +382,71 @@ int oapv_check_cpu_info_x86()
 }
 #endif
 
-int oapve_create_bs_buf(oapve_ctx_t  * ctx, int max_bs_buf_size)
+#if ENC_DEC_DUMP
+#include <stdarg.h>
+FILE* oapv_fp_dump;
+int oapv_is_dump;;
+
+void oapv_dump_string0(int cond, const char* fmt, ...)
 {
-    u8 * bs_buf;
-    for (int i = 0; i < ctx->cdesc.threads; i++)
+    if (!oapv_is_dump) return;
+    switch (cond)
     {
-        bs_buf = (u8*)oapv_malloc(sizeof(u8) * max_bs_buf_size);
-        oapv_bsw_init(&ctx->bs_thread[i], bs_buf, max_bs_buf_size, NULL);
+    case OAPV_DUMP_HLS:
+        if (!DUMP_ENABLE_HLS) return;
+        break;
+    case OAPV_DUMP_COEF:
+        if (!DUMP_ENABLE_COEF) return;
+        break;
+    default:
+        break;
     }
-    return OAPV_OK;
+
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(oapv_fp_dump, fmt, args);
+    fflush(oapv_fp_dump);
+    va_end(args);
 }
 
-int oapve_delete_bs_buf(oapve_ctx_t  * ctx)
+void oapv_dump_coef0(short* coef, int size, int x, int y, int c)
 {
-    for (int i = 0; i < ctx->cdesc.threads; i++)
+    if (!DUMP_ENABLE_COEF || !oapv_is_dump) return;
+
+    fprintf(oapv_fp_dump, "x pos : % d y pos : % d comp : % d\n", x, y, c);
+    fprintf(oapv_fp_dump, "coef:");
+    for (int i = 0; i < size; i++)
     {
-        u8* bs_buf_temp = ctx->bs_thread[i].beg;
-        oapv_mfree(bs_buf_temp);
-        bs_buf_temp = NULL;
+        fprintf(oapv_fp_dump, " %d", coef[i]);
     }
-    return OAPV_OK;
+    fprintf(oapv_fp_dump, "\n");
+    fflush(oapv_fp_dump);
 }
 
+void oapv_dump_create0(int is_enc)
+{
+    if (is_enc)
+    {
+        if (DUMP_ENABLE_HLS || DUMP_ENABLE_COEF)
+        {
+            oapv_fp_dump = fopen("enc_dump.txt", "w+");
+        }
+    }
+    else
+    {
+        if (DUMP_ENABLE_HLS || DUMP_ENABLE_COEF)
+        {
+            oapv_fp_dump = fopen("dec_dump.txt", "w+");
+        }
+    }
+    oapv_is_dump = 1;
+}
+
+void oapv_dump_delete0()
+{
+    if (DUMP_ENABLE_HLS || DUMP_ENABLE_COEF)
+    {
+        fclose(oapv_fp_dump);
+    }
+}
+#endif

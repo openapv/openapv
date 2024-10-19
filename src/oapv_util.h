@@ -34,7 +34,6 @@
 
 #include "oapv_def.h"
 
-
 #define oapv_max(a, b) (((a) > (b)) ? (a) : (b))
 #define oapv_min(a, b) (((a) < (b)) ? (a) : (b))
 #define oapv_median(x, y, z) ((((y) < (z)) ^ ((z) < (x))) ? (((x) < (y)) ^ ((z) < (x))) ? (y) : (x) : (z))
@@ -133,14 +132,57 @@ typedef struct
 void oapv_imgb_set_md5(oapv_imgb_t *imgb);
 void oapv_block_copy(s16 *src, int src_stride, s16 *dst, int dst_stride, int log2_copy_w, int log2_copy_h);
 
-int  oapve_create_bs_buf(oapve_ctx_t *ctx, int max_bs_buf_size);
-int  oapve_delete_bs_buf(oapve_ctx_t *ctx);
-
 int oapv_set_md5_pld(oapvm_t mid, int group_id, oapv_imgb_t *rec);
 
 #if X86_SSE
 int oapv_check_cpu_info_x86();
 #endif
+
+/* For debugging (START) */
+#define ENC_DEC_DUMP    0
+#if ENC_DEC_DUMP
+#if defined(__GNUC__)
+#pragma message "warning! syntax dump is on"
+#else
+#pragma message("warning! syntax dump is on")
+#endif
+
+#define DUMP_ENABLE_HLS            1
+#define DUMP_ENABLE_COEF           1
+
+typedef enum _OAPV_DUMP_OPTION {
+    OAPV_DUMP_HLS,
+    OAPV_DUMP_COEF,
+} OAPV_DUMP_OPTION;
+
+extern FILE* oapv_fp_dump;
+extern int oapv_is_dump;
+
+void oapv_dump_string0(int cond, const char* fmt, ...);
+void oapv_dump_coef0(short* coef, int size, int x, int y, int c);
+void oapv_dump_create0(int is_enc);
+void oapv_dump_delete0();
+
+// Syntax dump macro functions
+#define DUMP_CREATE(is_enc) oapv_dump_create0(is_enc)
+#define DUMP_DELETE() oapv_dump_delete0()
+#define DUMP_SET(val) oapv_is_dump = val
+#define DUMP_HLS(name, val) \
+    oapv_dump_string0(OAPV_DUMP_HLS, "%-34s: %12d\n", #name, val)
+#define DUMP_COEF(coef, size, x, y, c) \
+    oapv_dump_coef0(coef, size, x, y, c)
+#define DUMP_SAVE(id) long dump32u8i90432890_##id = ftell(oapv_fp_dump)
+#define DUMP_LOAD(id) fseek(oapv_fp_dump, dump32u8i90432890_##id, SEEK_SET)
+#else
+#define DUMP_CREATE(is_enc)
+#define DUMP_DELETE()
+#define DUMP_SET(val)
+#define DUMP_HLS(name, val)
+#define DUMP_COEF(coef, size, args, ...)
+#define DUMP_SAVE(id)
+#define DUMP_LOAD(id)
+#endif
+/* For debugging (END) */
 
 #endif /* __OAPV_UTIL_H__ */
 

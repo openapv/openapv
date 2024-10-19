@@ -33,15 +33,10 @@
 #define __OAPV_H__3342320849320483827648324783920483920432847382948__
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
-#ifdef OAPV_STATIC_DEFINE
-#define OAPV_EXPORT
-#else
 #include <oapv/oapv_exports.h>
-#endif
 
 /* size of macroblock */
 #define OAPV_LOG2_MB                    (4)
@@ -129,6 +124,9 @@ extern "C"
 #define OAPV_CS_YCBCR420_14LE           OAPV_CS_SET(OAPV_CF_YCBCR420, 14, 0)
 #define OAPV_CS_P210                    OAPV_CS_SET(OAPV_CF_PLANAR2, 10, 0)
 
+/* max number of color channel: YCbCr4444 -> 4 channels */
+#define OAPV_MAX_CC                     (4)
+
 /*****************************************************************************
  * config types
  *****************************************************************************/
@@ -152,7 +150,7 @@ extern "C"
 /*****************************************************************************
  * HLS configs
  *****************************************************************************/
-#define OAPV_MAX_GRP_SIZE               ((1 << 16) - 1)  // 0xFFFF reserved
+#define OAPV_MAX_GRP_SIZE               ((1 << 16) - 1) // 0xFFFF reserved
 
 /*****************************************************************************
  * PBU types
@@ -204,7 +202,7 @@ extern "C"
 /*****************************************************************************
  * type and macro for media time
  *****************************************************************************/
-typedef long long oapv_mtime_t; /* in 100-nanosec unit */
+typedef long long        oapv_mtime_t; /* in 100-nanosec unit */
 
 /*****************************************************************************
  * image buffer format
@@ -241,65 +239,63 @@ typedef long long oapv_mtime_t; /* in 100-nanosec unit */
  * - s, e : unit of byte
  *****************************************************************************/
 
-#define OAPV_IMGB_MAX_PLANE (4)
-
 typedef struct oapv_imgb oapv_imgb_t;
 struct oapv_imgb {
     int           cs; /* color space */
     int           np; /* number of plane */
     /* width (in unit of pixel) */
-    int           w[OAPV_IMGB_MAX_PLANE];
+    int           w[OAPV_MAX_CC];
     /* height (in unit of pixel) */
-    int           h[OAPV_IMGB_MAX_PLANE];
+    int           h[OAPV_MAX_CC];
     /* X position of left top (in unit of pixel) */
-    int           x[OAPV_IMGB_MAX_PLANE];
+    int           x[OAPV_MAX_CC];
     /* Y postion of left top (in unit of pixel) */
-    int           y[OAPV_IMGB_MAX_PLANE];
+    int           y[OAPV_MAX_CC];
     /* buffer stride (in unit of byte) */
-    int           s[OAPV_IMGB_MAX_PLANE];
+    int           s[OAPV_MAX_CC];
     /* buffer elevation (in unit of byte) */
-    int           e[OAPV_IMGB_MAX_PLANE];
+    int           e[OAPV_MAX_CC];
     /* address of each plane */
-    void*         a[OAPV_IMGB_MAX_PLANE];
+    void         *a[OAPV_MAX_CC];
 
     /* hash data for signature */
-    unsigned char hash[OAPV_IMGB_MAX_PLANE][16];
+    unsigned char hash[OAPV_MAX_CC][16];
 
     /* time-stamps */
     oapv_mtime_t  ts[4];
 
     int           ndata[4]; /* arbitrary data, if needs */
-    void*         pdata[4]; /* arbitrary adedress if needs */
+    void         *pdata[4]; /* arbitrary adedress if needs */
 
     /* aligned width (in unit of pixel) */
-    int           aw[OAPV_IMGB_MAX_PLANE];
+    int           aw[OAPV_MAX_CC];
     /* aligned height (in unit of pixel) */
-    int           ah[OAPV_IMGB_MAX_PLANE];
+    int           ah[OAPV_MAX_CC];
 
     /* left padding size (in unit of pixel) */
-    int           padl[OAPV_IMGB_MAX_PLANE];
+    int           padl[OAPV_MAX_CC];
     /* right padding size (in unit of pixel) */
-    int           padr[OAPV_IMGB_MAX_PLANE];
+    int           padr[OAPV_MAX_CC];
     /* up padding size (in unit of pixel) */
-    int           padu[OAPV_IMGB_MAX_PLANE];
+    int           padu[OAPV_MAX_CC];
     /* bottom padding size (in unit of pixel) */
-    int           padb[OAPV_IMGB_MAX_PLANE];
+    int           padb[OAPV_MAX_CC];
 
     /* address of actual allocated buffer */
-    void*         baddr[OAPV_IMGB_MAX_PLANE];
+    void         *baddr[OAPV_MAX_CC];
     /* actual allocated buffer size */
-    int           bsize[OAPV_IMGB_MAX_PLANE];
+    int           bsize[OAPV_MAX_CC];
 
     /* life cycle management */
     int           refcnt;
-    int (*addref)(oapv_imgb_t* imgb);
-    int (*getref)(oapv_imgb_t* imgb);
-    int (*release)(oapv_imgb_t* imgb);
+    int (*addref)(oapv_imgb_t *imgb);
+    int (*getref)(oapv_imgb_t *imgb);
+    int (*release)(oapv_imgb_t *imgb);
 };
 
 typedef struct oapv_frm oapv_frm_t;
 struct oapv_frm {
-    oapv_imgb_t* imgb;
+    oapv_imgb_t *imgb;
     int          pbu_type;
     int          group_id;
 };
@@ -309,8 +305,8 @@ struct oapv_frm {
 
 typedef struct oapv_frms oapv_frms_t;
 struct oapv_frms {
-    int        num_frms;                  // number of frames
-    oapv_frm_t frm[OAPV_MAX_NUM_FRAMES];  // container of frames
+    int        num_frms;                 // number of frames
+    oapv_frm_t frm[OAPV_MAX_NUM_FRAMES]; // container of frames
 };
 
 /*****************************************************************************
@@ -319,9 +315,9 @@ struct oapv_frms {
 typedef struct oapv_bitb oapv_bitb_t;
 struct oapv_bitb {
     /* user space address indicating buffer */
-    void*        addr;
+    void        *addr;
     /* physical address indicating buffer, if any */
-    void*        pddr;
+    void        *pddr;
     /* byte size of buffer memory */
     int          bsize;
     /* byte size of bitstream in buffer */
@@ -331,7 +327,7 @@ struct oapv_bitb {
     /* arbitrary data, if needs */
     int          ndata[4];
     /* arbitrary address, if needs */
-    void*        pdata[4];
+    void        *pdata[4];
     /* time-stamps */
     oapv_mtime_t ts[4];
 };
@@ -356,7 +352,7 @@ struct oapv_frm_info {
 
 typedef struct oapv_au_info oapv_au_info_t;
 struct oapv_au_info {
-    int             num_frms;  // number of frames
+    int             num_frms; // number of frames
     oapv_frm_info_t frm_info[OAPV_MAX_NUM_FRAMES];
 };
 
@@ -380,7 +376,7 @@ struct oapve_param {
     int fps_den;
     /* rate control type */
     int rc_type;
-    /* quantization parameter */
+    /* quantization parameter (0 ~ 63)*/
     int qp;
     /* quantization parameter offset for CB */
     int qp_cb_offset;
@@ -395,6 +391,7 @@ struct oapve_param {
     int q_matrix_y[OAPV_BLK_D];
     int q_matrix_u[OAPV_BLK_D];
     int q_matrix_v[OAPV_BLK_D];
+    int q_matrix_x[OAPV_BLK_D];
     /* color space */
     int csp;
     int tile_cols;
@@ -402,7 +399,6 @@ struct oapve_param {
     int tile_w_mb;
     int tile_h_mb;
     int preset;
-    int is_rec;
 };
 
 /*****************************************************************************
@@ -410,10 +406,10 @@ struct oapve_param {
  *****************************************************************************/
 typedef struct oapve_cdesc oapve_cdesc_t;
 struct oapve_cdesc {
-    int           max_bs_buf_size;             // max bitstream buffer size
-    int           max_num_frms;                // max number of frames to be encoded
-    int           threads;                     // number of threads
-    oapve_param_t param[OAPV_MAX_NUM_FRAMES];  // encoding parameters
+    int           max_bs_buf_size;            // max bitstream buffer size
+    int           max_num_frms;               // max number of frames to be encoded
+    int           threads;                    // number of threads
+    oapve_param_t param[OAPV_MAX_NUM_FRAMES]; // encoding parameters
 };
 
 /*****************************************************************************
@@ -421,9 +417,9 @@ struct oapve_cdesc {
  *****************************************************************************/
 typedef struct oapve_stat oapve_stat_t;
 struct oapve_stat {
-    int            write;                          // byte size of encoded bitstream
-    oapv_au_info_t aui;                            // information of encoded frames
-    int            frm_size[OAPV_MAX_NUM_FRAMES];  // bitstream byte size of each frame
+    int            write;                         // byte size of encoded bitstream
+    oapv_au_info_t aui;                           // information of encoded frames
+    int            frm_size[OAPV_MAX_NUM_FRAMES]; // bitstream byte size of each frame
 };
 
 /*****************************************************************************
@@ -431,7 +427,7 @@ struct oapve_stat {
  *****************************************************************************/
 typedef struct oapvd_cdesc oapvd_cdesc_t;
 struct oapvd_cdesc {
-    int threads;  // number of threads
+    int threads; // number of threads
 };
 
 /*****************************************************************************
@@ -439,8 +435,8 @@ struct oapvd_cdesc {
  *****************************************************************************/
 typedef struct oapvd_stat oapvd_stat_t;
 struct oapvd_stat {
-    int            read;  // byte size of decoded bitstream (read size)
-    oapv_au_info_t aui;   // information of decoded frames
+    int            read;                          // byte size of decoded bitstream (read size)
+    oapv_au_info_t aui;                           // information of decoded frames
     int            frm_size[OAPV_MAX_NUM_FRAMES]; // bitstream byte size of each frame
 };
 
@@ -449,56 +445,55 @@ struct oapvd_stat {
  *****************************************************************************/
 typedef struct oapvm_payload oapvm_payload_t;
 struct oapvm_payload {
-    int           group_id;   // group ID
-    int           type;       // payload type
-    unsigned char uuid[16];   // UUID for user-defined metadata payload
-    void*         data;       // address of metadata payload
-    int           data_size;  // byte size of metadata payload
+    int           group_id;  // group ID
+    int           type;      // payload type
+    unsigned char uuid[16];  // UUID for user-defined metadata payload
+    void         *data;      // address of metadata payload
+    int           data_size; // byte size of metadata payload
 };
 
 /*****************************************************************************
  * interface for metadata container
  *****************************************************************************/
-typedef void* oapvm_t; /* instance identifier for OAPV metadata container */
+typedef void       *oapvm_t; /* instance identifier for OAPV metadata container */
 
-oapvm_t OAPV_EXPORT oapvm_create(int* err);
+oapvm_t OAPV_EXPORT oapvm_create(int *err);
 void OAPV_EXPORT oapvm_delete(oapvm_t mid);
 void OAPV_EXPORT oapvm_rem_all(oapvm_t mid);
-int OAPV_EXPORT oapvm_set(oapvm_t mid, int group_id, int type, void* data, int size, unsigned char* uuid);
-int OAPV_EXPORT oapvm_get(oapvm_t mid, int group_id, int type, void** data, int* size, unsigned char* uuid);
-int OAPV_EXPORT oapvm_rem(oapvm_t mid, int group_id, int type, unsigned char* uuid);
-int OAPV_EXPORT oapvm_set_all(oapvm_t mid, oapvm_payload_t* pld, int num_plds);
-int OAPV_EXPORT oapvm_get_all(oapvm_t mid, oapvm_payload_t* pld, int* num_plds);
+int OAPV_EXPORT oapvm_set(oapvm_t mid, int group_id, int type, void *data, int size, unsigned char *uuid);
+int OAPV_EXPORT oapvm_get(oapvm_t mid, int group_id, int type, void **data, int *size, unsigned char *uuid);
+int OAPV_EXPORT oapvm_rem(oapvm_t mid, int group_id, int type, unsigned char *uuid);
+int OAPV_EXPORT oapvm_set_all(oapvm_t mid, oapvm_payload_t *pld, int num_plds);
+int OAPV_EXPORT oapvm_get_all(oapvm_t mid, oapvm_payload_t *pld, int *num_plds);
 
 /*****************************************************************************
  * interface for encoder
  *****************************************************************************/
-typedef void* oapve_t; /* instance identifier for OAPV encoder */
+typedef void       *oapve_t; /* instance identifier for OAPV encoder */
 
-oapve_t OAPV_EXPORT oapve_create(oapve_cdesc_t* cdesc, int* err);
+oapve_t OAPV_EXPORT oapve_create(oapve_cdesc_t *cdesc, int *err);
 void OAPV_EXPORT oapve_delete(oapve_t eid);
-int OAPV_EXPORT oapve_config(oapve_t eid, int cfg, void* buf, int* size);
-int OAPV_EXPORT oapve_param_default(oapve_param_t* param);
-int OAPV_EXPORT oapve_encode(oapve_t eid, oapv_frms_t* ifrms, oapvm_t mid, oapv_bitb_t* bitb, oapve_stat_t* stat, oapv_frms_t* rfrms);
+int OAPV_EXPORT oapve_config(oapve_t eid, int cfg, void *buf, int *size);
+int OAPV_EXPORT oapve_param_default(oapve_param_t *param);
+int OAPV_EXPORT oapve_encode(oapve_t eid, oapv_frms_t *ifrms, oapvm_t mid, oapv_bitb_t *bitb, oapve_stat_t *stat, oapv_frms_t *rfrms);
 
 /*****************************************************************************
  * interface for decoder
  *****************************************************************************/
-typedef void* oapvd_t; /* instance identifier for OAPV decoder */
+typedef void       *oapvd_t; /* instance identifier for OAPV decoder */
 
-oapvd_t OAPV_EXPORT oapvd_create(oapvd_cdesc_t* cdesc, int* err);
+oapvd_t OAPV_EXPORT oapvd_create(oapvd_cdesc_t *cdesc, int *err);
 void OAPV_EXPORT oapvd_delete(oapvd_t did);
-int OAPV_EXPORT oapvd_config(oapvd_t did, int cfg, void* buf, int* size);
-int OAPV_EXPORT oapvd_decode(oapvd_t did, oapv_bitb_t* bitb, oapv_frms_t* ofrms, oapvm_t mid, oapvd_stat_t* stat);
+int OAPV_EXPORT oapvd_config(oapvd_t did, int cfg, void *buf, int *size);
+int OAPV_EXPORT oapvd_decode(oapvd_t did, oapv_bitb_t *bitb, oapv_frms_t *ofrms, oapvm_t mid, oapvd_stat_t *stat);
 
 /*****************************************************************************
  * interface for utility
  *****************************************************************************/
-int OAPV_EXPORT oapvd_info(void* au, int au_size, oapv_au_info_t* aui);
+int OAPV_EXPORT oapvd_info(void *au, int au_size, oapv_au_info_t *aui);
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
 #endif /* __OAPV_H__3342320849320483827648324783920483920432847382948__ */
-
