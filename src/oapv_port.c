@@ -83,4 +83,3 @@ void oapv_trace_line(char * pre)
     str[chars] = '\0';
     printf("%s\n", str);
 }
-

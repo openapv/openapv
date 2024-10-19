@@ -31,58 +31,64 @@
 
 #include "oapv_rc.h"
 
-int oapve_rc_get_tile_cost(oapve_ctx_t* ctx, int tile_idx)
+int oapve_rc_get_tile_cost(oapve_ctx_t* ctx, oapve_core_t* core, oapve_tile_t* tile)
 {
-    ALIGNED_16(pel temp[64]);
     int sum = 0;
-    ctx->ti[tile_idx].rc.number_pixel = 0;
+    tile->rc.number_pixel = 0;
     for (int c = Y_C; c < ctx->num_comp; c++)
     {
-        int step_w = c ? 8 << ctx->ch_sft_w : 8;
-        int step_h = c ? 8 << ctx->ch_sft_h : 8;
-        for (int y = 0; y < ctx->ti[tile_idx].h; y += step_h)
+        int step_w = 8 << ctx->comp_sft[c][0];
+        int step_h = 8 << ctx->comp_sft[c][1];
+        for (int y = 0; y < tile->h; y += step_h)
         {
-            for (int x = 0; x < ctx->ti[tile_idx].w; x += step_w)
+            for (int x = 0; x < tile->w; x += step_w)
             {
-                int tx = ctx->ti[tile_idx].x + x;
-                int ty = ctx->ti[tile_idx].y + y;
-                ctx->fn_imgb_to_block(ctx->imgb, c, tx, ty, 8, 8, temp);
-                sum += ctx->fn_had8x8(temp, 8);
-                ctx->ti[tile_idx].rc.number_pixel += 64;
+                int tx = tile->x + x;
+                int ty = tile->y + y;
+
+                ctx->fn_imgb_to_block_rc(ctx->imgb, c, tx, ty, 8, 8, core->coef);
+                sum += ctx->fn_had8x8(core->coef, 8);
+                tile->rc.number_pixel += 64;
             }
         }
     }
 
-    ctx->ti[tile_idx].rc.cost = sum;
+    tile->rc.cost = sum;
 
     return OAPV_OK;
 }
 
 int get_tile_cost_thread(void* arg)
 {
-    oapve_rc_core_t* rc_core = (oapve_rc_core_t*)arg;
-    oapve_ctx_t* ctx = rc_core->ctx;
-    int tile_idx, ret;
+    oapve_core_t* core = (oapve_core_t*)arg;
+    oapve_ctx_t* ctx = core->ctx;
+    oapve_tile_t* tile = ctx->tile;
+    int tidx = 0, ret = OAPV_OK, i;
 
     while (1) {
-        ret = oapve_rc_get_tile_cost(ctx, rc_core->tile_idx);
-        oapv_assert_g(OAPV_SUCCEEDED(ret), ERR);
-
+        // find not processed tile
         oapv_tpool_enter_cs(ctx->sync_obj);
-        for (tile_idx = 0; tile_idx < ctx->num_tiles; tile_idx++)
+        for (i = 0; i < ctx->num_tiles; i++)
         {
-            if (ctx->tile_stat[tile_idx] == ENC_TILE_STAT_NOT_ENCODED)
+            if (tile[i].stat == ENC_TILE_STAT_NOT_ENCODED)
             {
-                ctx->tile_stat[tile_idx] = ENC_TILE_STAT_ON_ENCODING;
-                rc_core->tile_idx = tile_idx;
+                tile[i].stat = ENC_TILE_STAT_ON_ENCODING;
+                tidx = i;
                 break;
             }
         }
         oapv_tpool_leave_cs(ctx->sync_obj);
-        if (tile_idx == ctx->num_tiles)
+        if (i == ctx->num_tiles)
         {
             break;
         }
+
+        ret = oapve_rc_get_tile_cost(ctx, core, &tile[tidx]);
+        oapv_assert_g(OAPV_SUCCEEDED(ret), ERR);
+
+        oapv_tpool_enter_cs(ctx->sync_obj);
+        tile[tidx].stat = ENC_TILE_STAT_ENCODED;
+        oapv_tpool_leave_cs(ctx->sync_obj);
     }
 ERR:
     return ret;
@@ -91,29 +97,19 @@ ERR:
 int oapve_rc_get_tile_cost_thread(oapve_ctx_t* ctx, u64* sum)
 {
     for (int i = 0; i < ctx->num_tiles; i++) {
-        ctx->tile_stat[i] = ENC_TILE_STAT_NOT_ENCODED;
+        ctx->tile[i].stat = ENC_TILE_STAT_NOT_ENCODED;
     }
 
-    int parallel_task = 1;
-    parallel_task = (ctx->cdesc.threads > ctx->num_tiles) ? ctx->num_tiles : ctx->cdesc.threads;
+    oapv_tpool_t* tpool = ctx->tpool;
+    int parallel_task = (ctx->cdesc.threads > ctx->num_tiles) ? ctx->num_tiles : ctx->cdesc.threads;
 
-    oapv_tpool_t* tpool;
-    tpool = ctx->tpool;
-
-    for (int i = 0; i < parallel_task; i++) {
-        ctx->tile_stat[i] = ENC_TILE_STAT_ON_ENCODING;
-    }
     // run new threads
     int tidx = 0;
     for (tidx = 0; tidx < (parallel_task - 1); tidx++) {
-        ctx->rc_core[tidx]->ctx = ctx;
-        ctx->rc_core[tidx]->tile_idx = tidx;
-        tpool->run(ctx->thread_id[tidx], get_tile_cost_thread, (void*)ctx->rc_core[tidx]);
+        tpool->run(ctx->thread_id[tidx], get_tile_cost_thread, (void*)ctx->core[tidx]);
     }
     // use main thread
-    ctx->rc_core[tidx]->ctx = ctx;
-    ctx->rc_core[tidx]->tile_idx = tidx;
-    int ret = get_tile_cost_thread((void*)ctx->rc_core[tidx]);
+    int ret = get_tile_cost_thread((void*)ctx->core[tidx]);
     oapv_assert_rv(OAPV_SUCCEEDED(ret), ret);
 
     for (int thread_num1 = 0; thread_num1 < parallel_task - 1; thread_num1++) {
@@ -125,8 +121,8 @@ int oapve_rc_get_tile_cost_thread(oapve_ctx_t* ctx, u64* sum)
     *sum = 0;
     for (int i = 0; i < ctx->num_tiles; i++)
     {
-        *sum += ctx->ti[i].rc.cost;
-        ctx->tile_stat[i] = ENC_TILE_STAT_NOT_ENCODED;
+        *sum += ctx->tile[i].rc.cost;
+        ctx->tile[i].stat = ENC_TILE_STAT_NOT_ENCODED;
     }
 
     return ret;
@@ -142,7 +138,7 @@ double oapve_rc_estimate_pic_lambda(oapve_ctx_t* ctx, double cost)
     int num_pixel = ctx->w * ctx->h;
     for (int c = 1; c < ctx->num_comp; c++)
     {
-        num_pixel += (ctx->w * ctx->h) >> (ctx->ch_sft_h + ctx->ch_sft_w);
+        num_pixel += (ctx->w * ctx->h) >> (ctx->comp_sft[c][0] + ctx->comp_sft[c][1]);
     }
 
     double alpha = ctx->rc_param.alpha;
@@ -165,20 +161,19 @@ int oapve_rc_estimate_pic_qp(double lambda)
     return qp;
 }
 
-void oapve_rc_get_qp(oapve_ctx_t* ctx, int tile_idx, int tile_qp, int* qp)
+void oapve_rc_get_qp(oapve_ctx_t* ctx, oapve_tile_t* tile, int frame_qp, int* qp)
 {
-
     double   alpha = ctx->rc_param.alpha;
     double   beta = ctx->rc_param.beta;
 
-    double cost_pixel = ctx->ti[tile_idx].rc.cost / (double)ctx->ti[tile_idx].rc.number_pixel;
+    double cost_pixel = tile->rc.cost / (double)tile->rc.number_pixel;
     cost_pixel = pow(cost_pixel, OAPV_RC_BETA);
 
-    double bit_pixel =  (double)ctx->ti[tile_idx].rc.target_bits / (double)ctx->ti[tile_idx].rc.number_pixel;
+    double bit_pixel =  (double)tile->rc.target_bits / (double)tile->rc.number_pixel;
     double est_lambda = rc_calculate_lambda(alpha, beta, cost_pixel, bit_pixel);
 
-    int min_qp = tile_qp - 2 - OAPV_RC_QP_OFFSET;
-    int max_qp = tile_qp + 2 - OAPV_RC_QP_OFFSET;
+    int min_qp = frame_qp - 2 - OAPV_RC_QP_OFFSET;
+    int max_qp = frame_qp + 2 - OAPV_RC_QP_OFFSET;
 
     double max_lambda = exp(((double)(max_qp + 0.49) - 13.7122) / 4.2005);
     double min_lambda = exp(((double)(min_qp - 0.49) - 13.7122) / 4.2005);
@@ -197,7 +192,7 @@ void oapve_rc_update_after_pic(oapve_ctx_t* ctx, double cost)
     int num_pixel = ctx->w * ctx->h;
     for (int c = 1; c < ctx->num_comp; c++)
     {
-        num_pixel += (ctx->w * ctx->h) >> (ctx->ch_sft_h + ctx->ch_sft_w);
+        num_pixel += (ctx->w * ctx->h) >> (ctx->comp_sft[c][0] + ctx->comp_sft[c][1]);
     }
 
     int total_bits = 0;

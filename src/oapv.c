@@ -31,9 +31,9 @@
 
 #include "oapv_def.h"
 
-static void imgb_to_block(oapv_imgb_t *imgb, int c, int x_l, int y_l, int w_l, int h_l, s16 *block)
+static void imgb_to_block(oapv_imgb_t* imgb, int c, int x_l, int y_l, int w_l, int h_l, s16* block)
 {
-    u8 *src, *dst;
+    u8* src, * dst;
     int i, sft_hor, sft_ver;
     int bd = OAPV_CS_GET_BYTE_DEPTH(imgb->cs);
 
@@ -48,8 +48,8 @@ static void imgb_to_block(oapv_imgb_t *imgb, int c, int x_l, int y_l, int w_l, i
         sft_ver = get_chroma_sft_h(cfi);
     }
 
-    src = ((u8 *)imgb->a[c]) + ((y_l >> sft_ver) * imgb->s[c]) + ((x_l * bd) >> sft_hor);
-    dst = (u8 *)block;
+    src = ((u8*)imgb->a[c]) + ((y_l >> sft_ver) * imgb->s[c]) + ((x_l * bd) >> sft_hor);
+    dst = (u8*)block;
 
     for (i = 0; i < (h_l); i++)
     {
@@ -57,6 +57,57 @@ static void imgb_to_block(oapv_imgb_t *imgb, int c, int x_l, int y_l, int w_l, i
 
         src += imgb->s[c];
         dst += (w_l)*bd;
+    }
+}
+
+static void imgb_to_block_10bit(void* src, int blk_w, int blk_h, int s_src, int offset_src, int s_dst, void* dst)
+{
+    const int mid_val = (1 << (10 - 1));
+    s16* s = (s16*)src;
+    s16* d = (s16*)dst;
+
+    for (int h = 0; h < blk_h; h++)
+    {
+        for (int w = 0; w < blk_w; w++)
+        {
+            d[w] = s[w] - mid_val;
+        }
+        s = (s16*)(((u8*)s) + s_src);
+        d = (s16*)(((u8*)d) + s_dst);
+    }
+}
+
+static void imgb_to_block_p210_y(void* src, int blk_w, int blk_h, int s_src, int offset_src, int s_dst, void* dst)
+{
+    const int mid_val = (1 << (10 - 1));
+    u16* s = (s16*)src;
+    s16* d = (s16*)dst;
+
+    for (int h = 0; h < blk_h; h++)
+    {
+        for (int w = 0; w < blk_w; w++)
+        {
+            d[w] = (s16)(s[w] >> 6) - mid_val;
+        }
+        s = (u16*)(((u8*)s) + s_src);
+        d = (s16*)(((u8*)d) + s_dst);
+    }
+}
+
+static void imgb_to_block_p210_uv(void* src, int blk_w, int blk_h, int s_src, int offset_src, int s_dst, void* dst)
+{
+    const int mid_val = (1 << (10 - 1));
+    u16* s = (u16*)src + offset_src;
+    s16* d = (s16*)dst;
+
+    for (int h = 0; h < blk_h; h++)
+    {
+        for (int w = 0; w < blk_w; w++)
+        {
+            d[w] = (s16)(s[w * 2] >> 6) - mid_val;
+        }
+        s = (u16*)(((u8*)s) + s_src);
+        d = (s16*)(((u8*)d) + s_dst);
     }
 }
 
@@ -95,67 +146,70 @@ static void imgb_to_block_p210(oapv_imgb_t* imgb, int c, int x_l, int y_l, int w
         dst += w_l;
     }
 }
-static void block_to_imgb(s16 *block, int c, int x_l, int y_l, int w_l, int h_l, oapv_imgb_t *imgb)
+
+static void block_to_imgb_10bit(void* src, int blk_w, int blk_h, int s_src, int offset_dst, int s_dst, void* dst)
 {
-    u8 *src, *dst;
-    int i, sft_hor, sft_ver;
-    int bd = OAPV_CS_GET_BYTE_DEPTH(imgb->cs);
+    const int max_val = (1 << 10) - 1;
+    const int mid_val = (1 << (10 - 1));
+    s16 * s = (s16*)src;
+    u16 * d = (u16*)dst;
 
-    if (c == 0)
+    for (int h = 0; h < blk_h; h++)
     {
-        sft_hor = sft_ver = 0;
-    }
-    else
-    {
-        u8 cfi = color_format_to_chroma_format_idc(OAPV_CS_GET_FORMAT(imgb->cs));
-        sft_hor = get_chroma_sft_w(cfi);
-        sft_ver = get_chroma_sft_h(cfi);
-    }
-
-    src = (u8 *)block;
-    dst = ((u8 *)imgb->a[c]) + ((y_l >> sft_ver) * imgb->s[c]) + ((x_l * bd) >> sft_hor);
-
-    for (i = 0; i < (h_l); i++)
-    {
-        oapv_mcpy(dst, src, (w_l)*bd);
-
-        src += (w_l)*bd;
-        dst += imgb->s[c];
+        for (int w = 0; w < blk_w; w++)
+        {
+            d[w] = oapv_clip3(0, max_val, s[w] + mid_val);
+        }
+        s = (s16 *)(((u8*)s) + s_src);
+        d = (u16 *)(((u8*)d) + s_dst);
     }
 }
 
-static void block_to_imgb_p210(s16 *block, int c, int x_l, int y_l, int w_l, int h_l, oapv_imgb_t *imgb)
+static void block_to_imgb_p210_y(void* src, int blk_w, int blk_h, int s_src, int offset_dst, int s_dst, void* dst)
 {
-    s16 *src, *dst;
-    int sft_hor, sft_ver;
-    int size_scale = 1;
-    int tc = c;
+    const int max_val = (1 << 10) - 1;
+    const int mid_val = (1 << (10 - 1));
+    s16 * s = (s16*)src;
+    u16 * d = (u16*)dst;
 
-    if (c == 0)
+    for (int h = 0; h < blk_h; h++)
     {
-        sft_hor = sft_ver = 0;
-    }
-    else
-    {
-        u8 cfi = color_format_to_chroma_format_idc(OAPV_CS_GET_FORMAT(imgb->cs));
-        sft_hor = get_chroma_sft_w(cfi);
-        sft_ver = get_chroma_sft_h(cfi);
-        size_scale = 2;
-        tc = 1;
-    }
-
-    src = block;
-    dst = ((s16*)imgb->a[tc] + ((y_l >> sft_ver) * imgb->aw[tc]) + ((x_l * size_scale) >> sft_hor));
-
-
-    for (int i = 0; i < (h_l); i++)
-    {
-        for (int j = 0; j < (w_l); j++)
+        for (int w = 0; w < blk_w; w++)
         {
-          dst[j * size_scale + (c >> 1)] = (src[j] << 6);
+            d[w] = oapv_clip3(0, max_val, s[w] + mid_val) << 6;
         }
-        src += (w_l);
-        dst += imgb->aw[tc];
+        s = (s16 *)(((u8*)s) + s_src);
+        d = (u16 *)(((u8*)d) + s_dst);
+    }
+}
+
+static void block_to_imgb_p210_uv(void* src, int blk_w, int blk_h, int s_src, int x_pel, int s_dst, void* dst)
+{
+    const int max_val = (1 << 10) - 1;
+    const int mid_val = (1 << (10 - 1));
+    s16 * s = (s16*)src;
+
+    // x_pel is x-offset value from left boundary of picture in unit of pixel.
+    // the 'dst' address has calculated by
+    // dst = (s16*)((u8*)origin + y_pel*s_dst) + x_pel;
+    // in case of P210 color format,
+    // since 's_dst' is byte size of stride including all U and V pixel values,
+    // y-offset calculation is correct.
+    // however, the adding only x_pel is not enough to address the correct pixel
+    // position of U or V because U & V use the same buffer plane
+    // in interleaved way,
+    // so, the 'dst' address should be increased by 'x_pel' to address pixel
+    // position correctly.
+    u16 * d = (u16*)dst + x_pel; // p210 pixel value needs 0~65535 range
+
+    for (int h = 0; h < blk_h; h++)
+    {
+        for (int w = 0; w < blk_w; w++)
+        {
+            d[w * 2] = ((u16)oapv_clip3(0, max_val, s[w] + mid_val)) << 6;
+        }
+        s = (s16 *)(((u8*)s) + s_src);
+        d = (u16 *)(((u8*)d) + s_dst);
     }
 }
 
@@ -231,7 +285,6 @@ static void enc_core_free(oapve_core_t * core)
 static int enc_core_init(oapve_core_t * core, oapve_ctx_t * ctx, int tile_idx, int thread_idx)
 {
     core->tile_idx = tile_idx;
-    core->thread_idx = thread_idx;
     core->ctx = ctx;
     return OAPV_OK;
 }
@@ -245,7 +298,7 @@ static void enc_minus_mid_val(s16* coef, int w_blk, int h_blk, int bit_depth)
   }
 }
 
-static int enc_set_tile_info(oapv_tile_info_t* ti, int w_pel, int h_pel, int tile_w,
+static int enc_set_tile_info(oapve_tile_t* ti, int w_pel, int h_pel, int tile_w,
     int tile_h, int* num_tile_cols, int* num_tile_rows, int* num_tiles)
 {
     (*num_tile_cols) = (w_pel + (tile_w - 1)) / tile_w;
@@ -265,129 +318,347 @@ static int enc_set_tile_info(oapv_tile_info_t* ti, int w_pel, int h_pel, int til
 }
 
 
-static double enc_block(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int log2_w, int log2_h, int c)
+static double enc_block(oapve_ctx_t* ctx, oapve_core_t* core, int log2_w, int log2_h, int c)
 {
-    ALIGNED_16(s16 coef_t[OAPV_BLK_D]);
-    int b_w = 1 << log2_w;
-    int b_h = 1 << log2_h;
-    int bit_depth = OAPV_CS_GET_BIT_DEPTH(ctx->imgb->cs);
-    int qp = ctx->th[core->tile_idx].tile_qp[c];
-    int qscale = oapv_quant_scale[qp % 6];
-
-    ctx->fn_imgb_to_block(ctx->imgb, c, x, y, b_w, b_h, core->coef);
-    enc_minus_mid_val(core->coef, b_w, b_h, bit_depth);
+    int bit_depth = ctx->bit_depth;
 
     oapv_trans(ctx, core->coef, log2_w, log2_h, bit_depth);
-    (ctx->fn_quantb)[0](qp, core->q_matrix_enc[c], core->coef, log2_w, log2_h, qscale, c, bit_depth, c ? 128 : 212);
+    (ctx->fn_quant)[0](core->qp[c], core->q_matrix_enc[c], core->coef, log2_w, log2_h, oapv_quant_scale[core->qp[c] % 6], c, bit_depth, c ? 128 : 212);
 
     int prev_dc = core->prev_dc[c];
     core->prev_dc[c] = core->coef[0];
     core->coef[0] = core->coef[0] - prev_dc;
 
-    if (ctx->param->is_rec)
+    if (ctx->rec)
     {
-        oapv_mcpy(coef_t, core->coef, sizeof(s16) * OAPV_BLK_D);
-        int dqscale = oapv_tbl_dq_scale[qp % 6];
-        coef_t[0] = coef_t[0] + prev_dc;
-        oapv_itdq_block(ctx->fn_itx, ctx->fn_iquant, core->q_matrix_dec[c], coef_t, log2_w, log2_h, dqscale, bit_depth, qp);
-
-        plus_mid_val(coef_t, b_w, b_h, bit_depth);
-        /*store recon*/
-        ctx->fn_block_to_imgb(coef_t, c, x, y, (b_w), (b_h), ctx->rec);
+        oapv_mcpy(core->coef_rec, core->coef, sizeof(s16) * OAPV_BLK_D);
+        core->coef_rec[0] = core->coef_rec[0] + prev_dc;
+        ctx->fn_dquant[0](core->coef_rec, core->q_matrix_dec[c], log2_w, log2_h, core->dq_scale[c], core->dq_shift[c]);
+        oapv_itrans(ctx->fn_itx, core->coef_rec, log2_w, log2_h, bit_depth);
     }
 
     return 0;
 }
 
-static double enc_block_rdo(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int log2_w, int log2_h, int c)
+static double enc_block_rdo_slow(oapve_ctx_t* ctx, oapve_core_t* core, int log2_w, int log2_h, int c)
 {
-    oapv_bs_t* bs = &ctx->bs_thread[core->thread_idx];
-    int b_w = 1 << log2_w;
-    int b_h = 1 << log2_h;
-    int bit_depth = OAPV_CS_GET_BIT_DEPTH(ctx->imgb->cs);
-    int nnz;
-    double cost;
-    int qp = ctx->th[core->tile_idx].tile_qp[c];
-
-    s16 best_coeff[OAPV_BLK_D];
-    s16 best_recon[OAPV_BLK_D];
-    s16 recon[OAPV_BLK_D];
-    s16 coeff[OAPV_BLK_D];
-    double best_cost = MAX_COST;
-
-    double lambda = 0.57 * pow(2.0, ((double)(qp - 12)) / 3.0);
-    lambda = c ? lambda / pow(2.0, (-2) / 2.0) : lambda;
-
-    ctx->fn_imgb_to_block(ctx->imgb, c, x, y, b_w, b_h, core->coef);
-    enc_minus_mid_val(core->coef, b_w, b_h, bit_depth);
-    oapv_trans(ctx, core->coef, log2_w, log2_h, bit_depth);
-
+    int blk_w = 1 << log2_w;
+    int blk_h = 1 << log2_h;
+    int bit_depth = ctx->bit_depth;
+    int qp = core->qp[c];
+    s16 org[OAPV_BLK_D] = { 0 };
+    s16* best_coeff = core->coef;
+    s16* best_recon = core->coef_rec;
+    s16 recon[OAPV_BLK_D] = { 0 };
+    s16 coeff[OAPV_BLK_D] = { 0 };
+    int best_cost = INT_MAX;
     int qscale = oapv_quant_scale[qp % 6];
+    int zero_dist = 0;
+    const u16 * scanp = oapv_tbl_scan;
+    const int map_idx_diff[15] = {0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7};
 
-    int prev_dc = core->prev_dc[c];
-    int best_prev_dc = 0;
+    oapv_mcpy(org, core->coef, sizeof(s16) * OAPV_BLK_D);
+    oapv_trans(ctx, core->coef, log2_w, log2_h, bit_depth);
+    oapv_mcpy(coeff, core->coef, sizeof(s16) * OAPV_BLK_D);
+    (ctx->fn_quant)[0](qp, core->q_matrix_enc[c], coeff, log2_w, log2_h, qscale, c, bit_depth, c ? 112 : 212);
 
-    int stored_dc_ctx = core->prev_dc_ctx[c];
-    int stored_1st_ac_ctx = core->prev_1st_ac_ctx[c];
-
-    int min_val = c ? 118 : 192;
-    int max_val = c ? 138 : 232;
-    int step = 10;
-
-    for (int dz = min_val; dz <= max_val; dz += step)
     {
-        core->prev_dc_ctx[c] = stored_dc_ctx;
-        core->prev_1st_ac_ctx[c] = stored_1st_ac_ctx;
-
-        oapv_mcpy(coeff, core->coef, sizeof(s16) * OAPV_BLK_D);
-
-        nnz = (ctx->fn_quantb)[0](qp, core->q_matrix_enc[c], coeff, log2_w, log2_h, qscale, c, bit_depth, dz);
-
-        prev_dc = core->prev_dc[c];
-        int tmp_dc = prev_dc;
-        prev_dc = coeff[0];
-        coeff[0] = coeff[0] - tmp_dc;
-
-        bs->is_bin_count = 1;
-        bs->bin_count = 0;
-        oapve_vlc_run_length_cc(ctx, core, bs, coeff, log2_w, log2_h, nnz, c);
-        bs->is_bin_count = 0;
-
         oapv_mcpy(recon, coeff, sizeof(s16) * OAPV_BLK_D);
-
-        int dqscale = oapv_tbl_dq_scale[qp % 6];
-        recon[0] = recon[0] + tmp_dc;
-
-        oapv_itdq_block(ctx->fn_itx, ctx->fn_iquant, core->q_matrix_dec[c], recon, log2_w, log2_h, dqscale, bit_depth, qp);
-
-        plus_mid_val(recon, b_w, b_h, bit_depth);
-        s16* org = (s16*)((u8*)ctx->imgb->a[c] + ((y >> (c ? ctx->ch_sft_h : 0)) * ctx->imgb->s[c]) + ((x >> (c ? ctx->ch_sft_w : 0)) * 2));
-        int dist = (int)ctx->fn_ssd[0](b_w, b_h, org, recon, (ctx->imgb->s[c] >> 1), b_w, 10);
-
-        cost = lambda * bs->bin_count + dist;
-
-        if (cost < best_cost)
+        ctx->fn_dquant[0](recon, core->q_matrix_dec[c], log2_w, log2_h, core->dq_scale[c], core->dq_shift[c]);
+        oapv_itrans(ctx->fn_itx, recon, log2_w, log2_h, bit_depth);
+        int cost = (int)ctx->fn_ssd[0](blk_w, blk_h, org, recon, blk_w, blk_w, bit_depth);
+        oapv_mcpy(best_coeff, coeff, sizeof(s16) * OAPV_BLK_D);
+        if (ctx->rec)
         {
-            best_cost = cost;
-            oapv_mcpy(best_coeff, coeff, sizeof(s16) * OAPV_BLK_D);
             oapv_mcpy(best_recon, recon, sizeof(s16) * OAPV_BLK_D);
-            best_prev_dc = prev_dc;
+        }
+        if (cost == 0) {
+            zero_dist = 1;
+        }
+        best_cost = cost;
+    }
+
+    for(int itr = 0; itr < (c == 0 ? 2 : 1) && !zero_dist; itr++) {
+        for(int j = 0; j < OAPV_BLK_D && !zero_dist; j++) {
+            int best_idx = 0;
+            s16 org_coef = coeff[scanp[j]];
+            int adj_rng = c == 0 ? 13: 5;
+            if(org_coef == 0) {
+                if(c == 0 && scanp[j] < 3) {
+                    adj_rng = 3;
+                }
+                else {
+                    continue;
+                }
+            }
+
+            for(int i = 1; i < adj_rng && !zero_dist; i++) {
+                if(i > 2) {
+                    if(best_idx == 0) {
+                        continue;
+                    }
+                    else if(best_idx % 2 == 1 && i % 2 == 0) {
+                        continue;
+                    }
+                    else if(best_idx % 2 == 0 && i % 2 == 1) {
+                        continue;
+                    }
+                }
+
+                s16 test_coef   = org_coef + map_idx_diff[i];
+                coeff[scanp[j]] = test_coef;
+
+                oapv_mcpy(recon, coeff, sizeof(s16) * OAPV_BLK_D);
+                ctx->fn_dquant[0](recon, core->q_matrix_dec[c], log2_w, log2_h, core->dq_scale[c], core->dq_shift[c]);
+                oapv_itrans(ctx->fn_itx, recon, log2_w, log2_h, bit_depth);
+                int cost = (int)ctx->fn_ssd[0](blk_w, blk_h, org, recon, blk_w, blk_w, bit_depth);
+
+                if(cost < best_cost) {
+                    best_cost = cost;
+                    best_coeff[scanp[j]] = test_coef;
+                    if (ctx->rec)
+                    {
+                        oapv_mcpy(best_recon, recon, sizeof(s16) * OAPV_BLK_D);
+                    }
+                    best_idx = i;
+                    if(cost == 0) {
+                        zero_dist = 1;
+                    }
+                }
+                else
+                {
+                    coeff[scanp[j]] = org_coef + map_idx_diff[best_idx];
+                }
+            }
         }
     }
-    core->prev_dc[c] = best_prev_dc;
-    core->prev_dc_ctx[c] = stored_dc_ctx;
-    core->prev_1st_ac_ctx[c] = stored_1st_ac_ctx;
-    oapv_mcpy(core->coef, best_coeff, sizeof(s16) * OAPV_BLK_D);
 
-    if (ctx->param->is_rec)
-    {
-        /*store recon*/
-        ctx->fn_block_to_imgb(best_recon, c, x, y, (b_w), (b_h), ctx->rec);
-    }
+    int curr_dc = best_coeff[0];
+    best_coeff[0] -= core->prev_dc[c];
+    core->prev_dc[c] = curr_dc;
+
     return best_cost;
 }
 
-static int enc_init_param(oapve_ctx_t *ctx, oapve_param_t *param)
+static double enc_block_rdo_medium(oapve_ctx_t* ctx, oapve_core_t* core, int log2_w, int log2_h, int c)
+{
+    int blk_w = 1 << log2_w;
+    int blk_h = 1 << log2_h;
+    int bit_depth = ctx->bit_depth;
+    int qp = core->qp[c];
+
+    s16* best_coeff = core->coef;
+    s16* best_recon = core->coef_rec;
+
+    ALIGNED_16(s16 org[OAPV_BLK_D]);
+    ALIGNED_16(s16 recon[OAPV_BLK_D]);
+    ALIGNED_16(s16 coeff[OAPV_BLK_D]);
+    ALIGNED_16(s16 tmp_buf[OAPV_BLK_D]);
+
+    ALIGNED_32(int rec_ups[OAPV_BLK_D]);
+    ALIGNED_32(int rec_tmp[OAPV_BLK_D]);
+
+    int best_cost = INT_MAX;
+    int qscale = oapv_quant_scale[qp % 6];
+    int zero_dist = 0;
+    const u16* scanp = oapv_tbl_scan;
+    const int map_idx_diff[15] = { 0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7 };
+
+    oapv_mcpy(org, core->coef, sizeof(s16) * OAPV_BLK_D);
+    oapv_trans(ctx, core->coef, log2_w, log2_h, bit_depth);
+    oapv_mcpy(coeff, core->coef, sizeof(s16) * OAPV_BLK_D);
+    (ctx->fn_quant)[0](qp, core->q_matrix_enc[c], coeff, log2_w, log2_h, qscale, c, bit_depth, c ? 112 : 212);
+
+    {
+        oapv_mcpy(recon, coeff, sizeof(s16) * OAPV_BLK_D);
+        ctx->fn_dquant[0](recon, core->q_matrix_dec[c], log2_w, log2_h, core->dq_scale[c], core->dq_shift[c]);
+        ctx->fn_itx[0](recon, tmp_buf, ITX_SHIFT1, 1 << log2_w);
+        oapv_itx_pb8_get_wo_sft(tmp_buf, recon, rec_ups, ITX_SHIFT2(bit_depth), 1 << log2_h);
+
+
+        int cost = (int)ctx->fn_ssd[0](blk_w, blk_h, org, recon, blk_w, blk_w, bit_depth);
+        oapv_mcpy(best_coeff, coeff, sizeof(s16) * OAPV_BLK_D);
+        if (ctx->rec)
+        {
+            oapv_mcpy(best_recon, recon, sizeof(s16) * OAPV_BLK_D);
+        }
+        if (cost == 0) {
+            zero_dist = 1;
+        }
+        best_cost = cost;
+    }
+
+    for (int itr = 0; itr < (c == 0 ? 2 : 1) && !zero_dist; itr++) {
+        for (int j = 0; j < OAPV_BLK_D && !zero_dist; j++) {
+            int best_idx = 0;
+            s16 org_coef = coeff[scanp[j]];
+            int adj_rng = (c == 0 ? 13 : 5);
+            if (org_coef == 0) {
+                if (c == 0 && scanp[j] < 3) {
+                    adj_rng = 3;
+                }
+                else {
+                    continue;
+                }
+            }
+            int q_setp = (core->q_matrix_dec[c][scanp[j]] + (1 << (core->dq_shift[c] - 1))) >> core->dq_shift[c];
+
+            for (int i = 1; i < adj_rng && !zero_dist; i++) {
+                if (i > 2) {
+                    if (best_idx == 0) {
+                        continue;
+                    }
+                    else if (best_idx % 2 == 1 && i % 2 == 0) {
+                        continue;
+                    }
+                    else if (best_idx % 2 == 0 && i % 2 == 1) {
+                        continue;
+                    }
+                }
+
+                s16 test_coef = org_coef + map_idx_diff[i];
+                coeff[scanp[j]] = test_coef;
+                int step_diff = q_setp * map_idx_diff[i];
+                ctx->fn_itx_adj[0](rec_ups, rec_tmp, j, step_diff, 16);
+                for (int k = 0; k < 64; k++)
+                {
+                    recon[k] = (rec_tmp[k] + 512) >> 10;
+                }
+
+                int cost = (int)ctx->fn_ssd[0](blk_w, blk_h, org, recon, blk_w, blk_w, bit_depth);
+                if (cost < best_cost)
+                {
+                    oapv_mcpy(rec_ups, rec_tmp, sizeof(int) * OAPV_BLK_D);
+                    best_cost = cost;
+                    best_coeff[scanp[j]] = test_coef;
+                    best_idx = i;
+                    if (cost == 0) {
+                        zero_dist = 1;
+                    }
+                }
+                else
+                {
+                    coeff[scanp[j]] = org_coef + map_idx_diff[best_idx];
+                }
+            }
+        }
+    }
+
+    if (ctx->rec)
+    {
+        oapv_mcpy(best_recon, best_coeff, sizeof(s16) * OAPV_BLK_D);
+        ctx->fn_dquant[0](best_recon, core->q_matrix_dec[c], log2_w, log2_h, core->dq_scale[c], core->dq_shift[c]);
+        oapv_itrans(ctx->fn_itx, best_recon, log2_w, log2_h, bit_depth);
+    }
+
+    int curr_dc = best_coeff[0];
+    best_coeff[0] -= core->prev_dc[c];
+    core->prev_dc[c] = curr_dc;
+
+    return best_cost;
+}
+
+static double enc_block_rdo_placebo(oapve_ctx_t* ctx, oapve_core_t* core, int log2_w, int log2_h, int c)
+{
+    int blk_w = 1 << log2_w;
+    int blk_h = 1 << log2_h;
+    int bit_depth = ctx->bit_depth;
+    int qp = core->qp[c];
+    s16* best_coeff = core->coef;
+    s16* best_recon = core->coef_rec;
+    ALIGNED_16(s16 org[OAPV_BLK_D]);
+    ALIGNED_16(s16 recon[OAPV_BLK_D]);
+    ALIGNED_16(s16 coeff[OAPV_BLK_D]);
+    int best_cost = INT_MAX;
+    int qscale = oapv_quant_scale[qp % 6];
+    int zero_dist = 0;
+    const u16 * scanp = oapv_tbl_scan;
+    const int map_idx_diff[15] = {0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7};
+
+    oapv_mcpy(org, core->coef, sizeof(s16) * OAPV_BLK_D);
+    oapv_trans(ctx, core->coef, log2_w, log2_h, bit_depth);
+    oapv_mcpy(coeff, core->coef, sizeof(s16) * OAPV_BLK_D);
+    (ctx->fn_quant)[0](qp, core->q_matrix_enc[c], coeff, log2_w, log2_h, qscale, c, bit_depth, c ? 112 : 212);
+
+    {
+        oapv_mcpy(recon, coeff, sizeof(s16) * OAPV_BLK_D);
+        ctx->fn_dquant[0](recon, core->q_matrix_dec[c], log2_w, log2_h, core->dq_scale[c], core->dq_shift[c]);
+        oapv_itrans(ctx->fn_itx, recon, log2_w, log2_h, bit_depth);
+        int cost = (int)ctx->fn_ssd[0](blk_w, blk_h, org, recon, blk_w, blk_w, bit_depth);
+        oapv_mcpy(best_coeff, coeff, sizeof(s16) * OAPV_BLK_D);
+        if (ctx->rec)
+        {
+            oapv_mcpy(best_recon, recon, sizeof(s16) * OAPV_BLK_D);
+        }
+        if (cost == 0) {
+            zero_dist = 1;
+        }
+        best_cost = cost;
+    }
+
+    for(int itr = 0; itr < (c == 0 ? 7 : 3) && !zero_dist; itr++) {
+        for(int j = 0; j < OAPV_BLK_D && !zero_dist; j++) {
+            int best_idx = 0;
+            s16 org_coef = coeff[scanp[j]];
+            int adj_rng = (c == 0 ? 15 : 5);
+            if(org_coef == 0) {
+                if(c == 0 && scanp[j] < 3) {
+                    adj_rng = 3;
+                }
+                else {
+                    continue;
+                }
+            }
+
+            for(int i = 1; i < adj_rng && !zero_dist; i++) {
+                if(i > 2) {
+                    if(best_idx == 0) {
+                        continue;
+                    }
+                    else if(best_idx % 2 == 1 && i % 2 == 0) {
+                        continue;
+                    }
+                    else if(best_idx % 2 == 0 && i % 2 == 1) {
+                        continue;
+                    }
+                }
+
+                s16 test_coef   = org_coef + map_idx_diff[i];
+                coeff[scanp[j]] = test_coef;
+
+                oapv_mcpy(recon, coeff, sizeof(s16) * OAPV_BLK_D);
+                ctx->fn_dquant[0](recon, core->q_matrix_dec[c], log2_w, log2_h, core->dq_scale[c], core->dq_shift[c]);
+                oapv_itrans(ctx->fn_itx, recon, log2_w, log2_h, bit_depth);
+                int cost = (int)ctx->fn_ssd[0](blk_w, blk_h, org, recon, blk_w, blk_w, bit_depth);
+
+                if(cost < best_cost) {
+                    best_cost = cost;
+                    best_coeff[scanp[j]] = test_coef;
+                    if (ctx->rec)
+                    {
+                        oapv_mcpy(best_recon, recon, sizeof(s16) * OAPV_BLK_D);
+                    }
+                    best_idx = i;
+                    if(cost == 0) {
+                        zero_dist = 1;
+                    }
+                }
+                else
+                {
+                    coeff[scanp[j]] = org_coef + map_idx_diff[best_idx];
+                }
+            }
+        }
+    }
+
+    int curr_dc = best_coeff[0];
+    best_coeff[0] -= core->prev_dc[c];
+    core->prev_dc[c] = curr_dc;
+
+    return best_cost;
+}
+
+static int enc_read_param(oapve_ctx_t *ctx, oapve_param_t *param)
 {
     /* check input parameters */
     oapv_assert_rv(param->w > 0 && param->h > 0, OAPV_ERR_INVALID_ARGUMENT);
@@ -396,13 +667,18 @@ static int enc_init_param(oapve_ctx_t *ctx, oapve_param_t *param)
     ctx->qp[Y_C] = param->qp;
     ctx->qp[U_C] = param->qp + param->qp_cb_offset;
     ctx->qp[V_C] = param->qp + param->qp_cr_offset;
-    ctx->qp[T_C] = param->qp;
+    ctx->qp[X_C] = param->qp;
 
     ctx->num_comp = get_num_comp(param->csp);
 
-    if (param->preset == OAPV_PRESET_SLOW ||
-        param->preset == OAPV_PRESET_PLACEBO) {
-        ctx->fn_block = enc_block_rdo;
+    if (param->preset == OAPV_PRESET_SLOW) {
+        ctx->fn_block = enc_block_rdo_slow;
+    }
+    else if(param->preset == OAPV_PRESET_PLACEBO) {
+        ctx->fn_block = enc_block_rdo_placebo;
+    }
+    else if (param->preset == OAPV_PRESET_MEDIUM) {
+        ctx->fn_block = enc_block_rdo_medium;
     }
     else {
         ctx->fn_block = enc_block;
@@ -410,19 +686,13 @@ static int enc_init_param(oapve_ctx_t *ctx, oapve_param_t *param)
 
     ctx->log2_block = OAPV_LOG2_BLK;
 
-    ctx->mb = 1 << OAPV_LOG2_MB;
-
     /* set various value */
-    ctx->w = ((ctx->param->w + (ctx->mb - 1)) >> OAPV_LOG2_MB_W) << OAPV_LOG2_MB_W;
-    ctx->h = ((ctx->param->h + (ctx->mb - 1)) >> OAPV_LOG2_MB_H) << OAPV_LOG2_MB_H;
+    ctx->w = ((ctx->param->w + (OAPV_MB_W - 1)) >> OAPV_LOG2_MB_W) << OAPV_LOG2_MB_W;
+    ctx->h = ((ctx->param->h + (OAPV_MB_H - 1)) >> OAPV_LOG2_MB_H) << OAPV_LOG2_MB_H;
 
-    int tile_w = ctx->param->tile_w_mb * ctx->mb;
-    int tile_h = ctx->param->tile_h_mb * ctx->mb;
-    enc_set_tile_info(ctx->ti, ctx->w, ctx->h, tile_w, tile_h, &ctx->num_tile_cols, &ctx->num_tile_rows, &ctx->num_tiles);
-
-    int size = ctx->num_tiles * sizeof(oapv_th_t);
-    ctx->th = (oapv_th_t*)oapv_malloc(size);
-    oapv_assert_rv(ctx->th, OAPV_ERR_UNKNOWN);
+    int tile_w = ctx->param->tile_w_mb * OAPV_MB_W;
+    int tile_h = ctx->param->tile_h_mb * OAPV_MB_H;
+    enc_set_tile_info(ctx->tile, ctx->w, ctx->h, tile_w, tile_h, &ctx->num_tile_cols, &ctx->num_tile_rows, &ctx->num_tiles);
 
     return OAPV_OK;
 }
@@ -459,9 +729,7 @@ static void enc_flush(oapve_ctx_t* ctx)
         ctx->core[i] = NULL;
     }
 
-
-    oapv_mfree_fast(ctx->bs_temp_buf[0]);
-    oapv_mfree_fast(ctx->th);
+    oapv_mfree_fast(ctx->tile[0].bs_buf);
 }
 
 static int enc_ready(oapve_ctx_t *ctx)
@@ -475,11 +743,6 @@ static int enc_ready(oapve_ctx_t *ctx)
         core = enc_core_alloc();
         oapv_assert_gv(core != NULL, ret, OAPV_ERR_OUT_OF_MEMORY, ERR);
         ctx->core[i] = core;
-
-        oapve_rc_core_t* rc_core = (oapve_rc_core_t*)oapv_malloc_fast(sizeof(oapve_rc_core_t));
-        oapv_assert_gv(rc_core != NULL, ret, OAPV_ERR_OUT_OF_MEMORY, ERR);
-        oapv_mset_x64a(rc_core, 0, sizeof(oapve_rc_core_t));
-        ctx->rc_core[i] = rc_core;
     }
 
     //initialize the threads to NULL
@@ -505,10 +768,10 @@ static int enc_ready(oapve_ctx_t *ctx)
 
     for (int i = 0; i < OAPV_MAX_TILES; i++)
     {
-        ctx->tile_stat[i] = ENC_TILE_STAT_NOT_ENCODED;
+        ctx->tile[i].stat = ENC_TILE_STAT_NOT_ENCODED;
     }
-    ctx->bs_temp_buf[0] = (u8*)oapv_malloc(ctx->cdesc.max_bs_buf_size);
-    oapv_assert_gv(ctx->bs_temp_buf[0], ret, OAPV_ERR_UNKNOWN, ERR);
+    ctx->tile[0].bs_buf = (u8*)oapv_malloc(ctx->cdesc.max_bs_buf_size);
+    oapv_assert_gv(ctx->tile[0].bs_buf, ret, OAPV_ERR_UNKNOWN, ERR);
 
     ctx->rc_param.alpha = OAPV_RC_ALPHA;
     ctx->rc_param.beta = OAPV_RC_BETA;
@@ -521,53 +784,43 @@ ERR:
     return ret;
 }
 
-static int enc_vlc_tile(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int tile_idx, int c)
+static int enc_tile_comp(oapv_bs_t* bs, oapve_tile_t* tile, oapve_ctx_t* ctx, oapve_core_t* core, int c, int s_org, void* org, int s_rec, void* rec)
 {
-    oapv_bs_t* bs = &ctx->bs_thread[core->thread_idx];
-    int h_mb, w_mb, b_h, b_w;
+    int mb_h, mb_w, mb_y, mb_x, blk_x, blk_y;
+    s16* o16 = NULL, * r16 = NULL;
 
     u8* bs_cur = oapv_bsw_sink(bs);
     oapv_assert_rv(bsw_is_align8(bs), OAPV_ERR_MALFORMED_BITSTREAM);
 
-    w_mb = OAPV_MB_W >> (c ? ctx->ch_sft_w : 0);
-    h_mb = OAPV_MB_H >> (c ? ctx->ch_sft_h : 0);
+    mb_w = OAPV_MB_W >> ctx->comp_sft[c][0];
+    mb_h = OAPV_MB_H >> ctx->comp_sft[c][1];
 
-    for (int ty = 0; ty < ctx->ti[tile_idx].h && y + ty < ctx->h; ty += ctx->mb)
+    int tile_le = tile->x >> ctx->comp_sft[c][0];
+    int tile_ri = (tile->w >> ctx->comp_sft[c][0]) + tile_le;
+    int tile_to = tile->y >> ctx->comp_sft[c][1];
+    int tile_bo = (tile->h >> ctx->comp_sft[c][1]) + tile_to;
+
+    for (mb_y = tile_to; mb_y < tile_bo; mb_y += mb_h)
     {
-        for (int tx = 0; tx < ctx->ti[tile_idx].w; tx += ctx->mb)
+        for (mb_x = tile_le; mb_x < tile_ri; mb_x += mb_w)
         {
-            int mb_x = x + tx;
-            int mb_y = y + ty;
-
-            b_h = 1 << OAPV_LOG2_BLK_H;
-            b_w = 1 << OAPV_LOG2_BLK_W;
-
-            for (int b_y = 0; b_y < h_mb; b_y += b_h)
+            for (blk_y = mb_y; blk_y < (mb_y + mb_h); blk_y += OAPV_BLK_H)
             {
-                for (int b_x = 0; b_x < w_mb; b_x += b_w)
+                for (blk_x = mb_x; blk_x < (mb_x + mb_w); blk_x += OAPV_BLK_W)
                 {
-                    int cx = mb_x + (b_x << (c ? ctx->ch_sft_w : 0));
-                    int cy = mb_y + (b_y << (c ? ctx->ch_sft_h : 0));
+                    o16 = (s16*)((u8*)org + blk_y  * s_org) + blk_x;
+                    ctx->fn_imgb_to_block[c](o16, OAPV_BLK_W, OAPV_BLK_H, s_org, blk_x, (OAPV_BLK_W << 1), core->coef);
 
-#if ENC_DEC_TRACE
-                    OAPV_TRACE_SET(TRACE_COEF_BIN);
-                    OAPV_TRACE_COUNTER;
-                    OAPV_TRACE_STR("x pos ");
-                    OAPV_TRACE_INT(cx);
-                    OAPV_TRACE_STR("y pos ");
-                    OAPV_TRACE_INT(cy);
-                    OAPV_TRACE_STR("width ");
-                    OAPV_TRACE_INT(b_h);
-                    OAPV_TRACE_STR("height ");
-                    OAPV_TRACE_INT(b_w);
-                    OAPV_TRACE_STR("CH ");
-                    OAPV_TRACE_STR((c == 0 ? "Y" : (c == 1 ? "U" : "V")));
-                    OAPV_TRACE_STR("\n");
-#endif
-
-                    ctx->fn_block(ctx, core, cx, cy, OAPV_LOG2_BLK_W, OAPV_LOG2_BLK_H, c);
+                    ctx->fn_block(ctx, core, OAPV_LOG2_BLK_W, OAPV_LOG2_BLK_H, c);
                     oapve_vlc_dc_coeff(ctx, core, bs, core->coef[0], c);
                     oapve_vlc_ac_coeff(ctx, core, bs, core->coef, 0, c);
+                    DUMP_COEF(core->coef, OAPV_BLK_D, blk_x, blk_y, c);
+
+                    if (rec != NULL)
+                    {
+                        r16 = (s16*)((u8*)rec + blk_y *s_rec) + blk_x;
+                        ctx->fn_block_to_imgb[c](core->coef_rec, OAPV_BLK_W, OAPV_BLK_H, (OAPV_BLK_W << 1), blk_x, s_rec, r16);
+                    }
                 }
             }
         }
@@ -585,18 +838,15 @@ static int enc_vlc_tile(oapve_ctx_t* ctx, oapve_core_t* core, int x, int y, int 
     return (int)(bs->cur - bs_cur);
 }
 
-static int enc_tile(oapve_ctx_t *ctx, oapve_core_t *core)
+static int enc_tile(oapve_ctx_t *ctx, oapve_core_t *core, oapve_tile_t* tile)
 {
-    oapv_bs_t *bs = &ctx->bs_thread[core->thread_idx];
-    oapv_bsw_init(bs, bs->beg, bs->size, NULL);
-    int x = ctx->ti[core->tile_idx].x;
-    int y = ctx->ti[core->tile_idx].y;
-    int tile_idx = core->tile_idx;
+    oapv_bs_t bs;
+    oapv_bsw_init(&bs, tile->bs_buf, tile->bs_buf_max, NULL);
 
     int qp = 0;
     if (ctx->param->rc_type != 0)
     {
-        oapve_rc_get_qp(ctx, core->tile_idx, ctx->qp[Y_C], &qp);
+        oapve_rc_get_qp(ctx, tile, ctx->qp[Y_C], &qp);
         oapv_assert(qp != 0);
     }
     else
@@ -604,47 +854,41 @@ static int enc_tile(oapve_ctx_t *ctx, oapve_core_t *core)
         qp = ctx->qp[Y_C];
     }
 
-    ctx->tile_size[tile_idx] = 0;
-    oapve_vlc_tile_size(bs, ctx->tile_size[tile_idx]);
-    oapve_set_tile_header(ctx, &ctx->th[tile_idx], tile_idx, qp);
-    OAPV_TRACE_SET(0);
-    oapve_vlc_tile_header(ctx, bs, &ctx->th[tile_idx]);
+    tile->data_size = 0;
+    DUMP_SAVE(0);
+    oapve_vlc_tile_size(&bs, tile->data_size);
+    oapve_set_tile_header(ctx, &tile->th, core->tile_idx, qp);
+    oapve_vlc_tile_header(ctx, &bs, &tile->th);
 
     for (int c = 0; c < ctx->num_comp; c++)
     {
-        for (int cidx = 0; cidx < ctx->num_comp; cidx++)
+        int cnt = 0;
+        core->qp[c] = tile->th.tile_qp[c];
+        int qscale = oapv_quant_scale[core->qp[c] % 6];
+        s32 scale_multiply_16 = (s32)(qscale << 4);
+        for (int y = 0; y < OAPV_BLK_H; y++)
         {
+            for (int x = 0; x < OAPV_BLK_W; x++)
+            {
+                core->q_matrix_enc[c][cnt++] = scale_multiply_16 / ctx->fh.q_matrix[c][y][x];
+            }
+        }
+
+        if (ctx->rec || ctx->param->preset > OAPV_PRESET_MEDIUM)
+        {
+            core->dq_scale[c] = oapv_tbl_dq_scale[core->qp[c] % 6];
+            core->dq_shift[c] = ctx->bit_depth - 2 - (core->qp[c] / 6);
+
             int cnt = 0;
-            int qp = ctx->th[tile_idx].tile_qp[cidx];
-            int qscale = oapv_quant_scale[qp % 6];
-            s32 scale_multiply_16 = (s32)(qscale << 4);
+            int dqscale = oapv_tbl_dq_scale[qp % 6];
             for (int y = 0; y < OAPV_BLK_H; y++)
             {
                 for (int x = 0; x < OAPV_BLK_W; x++)
                 {
-                    core->q_matrix_enc[cidx][cnt++] = scale_multiply_16 / ctx->fh.q_matrix[cidx][y][x];
+                    core->q_matrix_dec[c][cnt++] = dqscale * ctx->fh.q_matrix[c][y][x];
                 }
             }
         }
-        if (ctx->param->is_rec)
-        {
-            for (int cidx = 0; cidx < ctx->num_comp; cidx++)
-            {
-                int cnt = 0;
-                int qp = ctx->th[tile_idx].tile_qp[cidx];
-                int dqscale = oapv_tbl_dq_scale[qp % 6];
-                for (int y = 0; y < OAPV_BLK_H; y++)
-                {
-                    for (int x = 0; x < OAPV_BLK_W; x++)
-                    {
-                        core->q_matrix_dec[cidx][cnt++] = dqscale * ctx->fh.q_matrix[cidx][y][x];
-                    }
-                }
-            }
-        }
-        core->prev_dc_ctx[c] = 20;
-        core->prev_1st_ac_ctx[c] = 0;
-        core->prev_dc[c] = 0;
     }
 
     for (int c = 0; c < ctx->num_comp; c++)
@@ -652,27 +896,66 @@ static int enc_tile(oapve_ctx_t *ctx, oapve_core_t *core)
         core->prev_dc_ctx[c] = 20;
         core->prev_1st_ac_ctx[c] = 0;
         core->prev_dc[c] = 0;
-        ctx->th[tile_idx].tile_data_size[c] = enc_vlc_tile(ctx, core, x, y, tile_idx, c);
+
+        int tc, s_org, s_rec;
+        s16* org, *rec;
+
+        if (OAPV_CS_GET_FORMAT(ctx->imgb->cs) == OAPV_CF_PLANAR2)
+        {
+            tc = c > 0 ? 1 : 0;
+            org = ctx->imgb->a[tc];
+            org += (c > 1) ? 1 : 0;
+            s_org = ctx->imgb->s[tc];
+
+            if (ctx->rec)
+            {
+                rec = ctx->rec->a[tc];
+                rec += (c > 1) ? 1 : 0;
+                s_rec = ctx->imgb->s[tc];
+            }
+            else
+            {
+                rec = NULL;
+                s_rec = 0;
+            }
+        }
+        else
+        {
+            org = ctx->imgb->a[c];
+            s_org = ctx->imgb->s[c];
+            if (ctx->rec)
+            {
+                rec = ctx->rec->a[c];
+                s_rec = ctx->imgb->s[c];
+            }
+            else
+            {
+                rec = NULL;
+                s_rec = 0;
+            }
+        }
+
+        tile->th.tile_data_size[c] = enc_tile_comp(&bs, tile, ctx, core, c, s_org, org, s_rec, rec);
     }
 
-    u32 bs_size = (int)(bs->cur - bs->beg);
-    if (bs_size > ctx->ti[tile_idx].max_data_size)
+    u32 bs_size = (int)(bs.cur - bs.beg);
+    if (bs_size > tile->bs_buf_max)
     {
         return OAPV_ERR_OUT_OF_BS_BUF;
     }
-    ctx->bs_temp_size[core->tile_idx] = bs_size;
-    oapv_mcpy(ctx->bs_temp_buf[core->tile_idx], bs->beg, bs_size);
+    tile->bs_size = bs_size;
 
     oapv_bs_t  bs_th;
     bs_th.is_bin_count = 0;
-    oapv_bsw_init(&bs_th, ctx->bs_temp_buf[tile_idx], ctx->bs_temp_size[tile_idx], NULL);
-    ctx->tile_size[tile_idx] = bs_size - OAPV_TILE_SIZE_LEN;
-    oapve_vlc_tile_size(&bs_th, ctx->tile_size[tile_idx]);
-    OAPV_TRACE_SET(TRACE_HLS);
-    oapve_vlc_tile_header(ctx, &bs_th, &ctx->th[tile_idx]);
-    oapv_bsw_deinit(&bs_th);
+    oapv_bsw_init(&bs_th, tile->bs_buf, tile->bs_size, NULL);
+    tile->data_size = bs_size - OAPV_TILE_SIZE_LEN;
 
-    ctx->tile_stat[core->tile_idx] = ENC_TILE_STAT_ENCODED;
+    DUMP_SAVE(1);
+    DUMP_LOAD(0);
+    oapve_vlc_tile_size(&bs_th, tile->data_size);
+    oapve_vlc_tile_header(ctx, &bs_th, &tile->th);
+    DUMP_LOAD(1);
+    oapv_bsw_deinit(&bs_th);
     return OAPV_OK;
 }
 
@@ -680,27 +963,34 @@ static int enc_thread_tile(void *arg)
 {
     oapve_core_t *core = (oapve_core_t *)arg;
     oapve_ctx_t *ctx = core->ctx;
-    int tile_idx, ret, run = 1;
+    oapve_tile_t* tile = ctx->tile;
+    int ret = OAPV_OK, i;
 
-    while (run) {
-        ret = enc_tile(ctx, core);
-        oapv_assert_g(OAPV_SUCCEEDED(ret), ERR);
-
+    while (1)
+    {
+        // find not encoded tile
         oapv_tpool_enter_cs(ctx->sync_obj);
-        for (tile_idx = 0; tile_idx < ctx->num_tiles; tile_idx++)
+        for (i = 0; i < ctx->num_tiles; i++)
         {
-            if (ctx->tile_stat[tile_idx] == ENC_TILE_STAT_NOT_ENCODED)
+            if (tile[i].stat == ENC_TILE_STAT_NOT_ENCODED)
             {
-                ctx->tile_stat[tile_idx] = ENC_TILE_STAT_ON_ENCODING;
-                core->tile_idx = tile_idx;
+                tile[i].stat = ENC_TILE_STAT_ON_ENCODING;
+                core->tile_idx = i;
                 break;
             }
         }
         oapv_tpool_leave_cs(ctx->sync_obj);
-        if (tile_idx == ctx->num_tiles)
+        if (i == ctx->num_tiles)
         {
-            run = 0;
+            break;
         }
+
+        ret = enc_tile(ctx, core, &tile[core->tile_idx]);
+        oapv_assert_g(OAPV_SUCCEEDED(ret), ERR);
+
+        oapv_tpool_enter_cs(ctx->sync_obj);
+        tile[core->tile_idx].stat = ENC_TILE_STAT_ENCODED;
+        oapv_tpool_leave_cs(ctx->sync_obj);
     }
 ERR:
     return ret;
@@ -769,14 +1059,11 @@ static void enc_img_pad(oapve_ctx_t* ctx, oapv_imgb_t* imgb)
 
   if (ctx->w != ctx->param->w)
   {
-        for (int c = 0; c < imgb->np; c++)
+    for (int c = 0; c < imgb->np; c++)
     {
-      int shift_w = c ? ctx->ch_sft_w : 0;
-      int shift_h = c ? ctx->ch_sft_h : 0;
-
-      int sw = ctx->param->w >> shift_w;
-      int ew = ctx->w >> shift_w;
-      int th = ctx->h >> shift_h;
+      int sw = ctx->param->w >> ctx->comp_sft[c][0];
+      int ew = ctx->w >> ctx->comp_sft[c][0];
+      int th = ctx->h >> ctx->comp_sft[c][1];
       pel * dst = (pel*)imgb->a[c];
       pel src;
 
@@ -794,14 +1081,11 @@ static void enc_img_pad(oapve_ctx_t* ctx, oapv_imgb_t* imgb)
 
   if (ctx->h != ctx->param->h)
   {
-        for (int c = 0; c < imgb->np; c++)
+    for (int c = 0; c < imgb->np; c++)
     {
-      int shift_w = c ? ctx->ch_sft_w : 0;
-      int shift_h = c ? ctx->ch_sft_h : 0;
-
-      int sh = ctx->param->h >> shift_h;
-      int eh = ctx->h >> shift_h;
-      int tw = ctx->w >> shift_w;
+      int sh = ctx->param->h >> ctx->comp_sft[c][1];
+      int eh = ctx->h >> ctx->comp_sft[c][1];
+      int tw = ctx->w >> ctx->comp_sft[c][0];
       pel * dst = ((pel*)imgb->a[c]) + sh * (imgb->s[c] >> 1);
       pel * src = dst - (imgb->s[c] >> 1);
 
@@ -815,76 +1099,88 @@ static void enc_img_pad(oapve_ctx_t* ctx, oapv_imgb_t* imgb)
 
 }
 
-static int enc_prepare(oapve_ctx_t *ctx, oapv_imgb_t *imgb, oapv_bitb_t *bitb, oapv_imgb_t *rec)
+static int enc_frm_prepare(oapve_ctx_t *ctx, oapv_imgb_t *imgb_i, oapv_imgb_t *imgb_r)
 {
-    oapv_assert_rv(ctx->qp[Y_C] >= MIN_QUANT && ctx->qp[Y_C] <= MAX_QUANT, OAPV_ERR_INVALID_ARGUMENT);
-
-    ctx->cfi= color_format_to_chroma_format_idc(OAPV_CS_GET_FORMAT(imgb->cs));
+    ctx->cfi= color_format_to_chroma_format_idc(OAPV_CS_GET_FORMAT(imgb_i->cs));
     ctx->num_comp = get_num_comp(ctx->cfi);
-    ctx->ch_sft_w = get_chroma_sft_w(ctx->cfi);
-    ctx->ch_sft_h = get_chroma_sft_h(ctx->cfi);
 
-    if (OAPV_CS_GET_FORMAT(imgb->cs) == OAPV_CF_PLANAR2)
+    ctx->comp_sft[Y_C][0] = 0;
+    ctx->comp_sft[Y_C][1] = 0;
+    for (int c = 1; c < ctx->num_comp; c++)
     {
-        ctx->fn_imgb_to_block = imgb_to_block_p210;
-        ctx->fn_block_to_imgb = block_to_imgb_p210;
+        ctx->comp_sft[c][0] = get_chroma_sft_w(ctx->cfi);
+        ctx->comp_sft[c][1] = get_chroma_sft_h(ctx->cfi);
+    }
+
+    ctx->bit_depth = OAPV_CS_GET_BIT_DEPTH(imgb_i->cs);
+
+    if (OAPV_CS_GET_FORMAT(imgb_i->cs) == OAPV_CF_PLANAR2)
+    {
+        ctx->fn_imgb_to_block_rc = imgb_to_block_p210;
+
+        ctx->fn_imgb_to_block[Y_C] = imgb_to_block_p210_y;
+        ctx->fn_imgb_to_block[U_C] = imgb_to_block_p210_uv;
+        ctx->fn_imgb_to_block[V_C] = imgb_to_block_p210_uv;
+
+        ctx->fn_block_to_imgb[Y_C] = block_to_imgb_p210_y;
+        ctx->fn_block_to_imgb[U_C] = block_to_imgb_p210_uv;
+        ctx->fn_block_to_imgb[V_C] = block_to_imgb_p210_uv;
         ctx->fn_img_pad = enc_img_pad_p210;
     }
     else
     {
-        ctx->fn_imgb_to_block = imgb_to_block;
-        ctx->fn_block_to_imgb = block_to_imgb;
+        ctx->fn_imgb_to_block_rc = imgb_to_block;
+        for (int i = 0; i < ctx->num_comp; i++)
+        {
+            ctx->fn_imgb_to_block[i] = imgb_to_block_10bit;
+            ctx->fn_block_to_imgb[i] = block_to_imgb_10bit;
+        }
         ctx->fn_img_pad = enc_img_pad;
     }
+
     /* initialize bitstream container */
     //oapv_bsw_init(&ctx->bs, bitb->addr, bitb->bsize, NULL); // TODO : remove
-    for (int i = 0; i < ctx->cdesc.threads; i++)
-    {
-        oapv_bsw_init(&ctx->bs_thread[i], ctx->bs_thread[i].beg, bitb->bsize, NULL);
-    }
+    ctx->w = (imgb_i->aw[Y_C] > 0)? imgb_i->aw[Y_C]: imgb_i->w[Y_C];
+    ctx->h = (imgb_i->ah[Y_C] > 0)? imgb_i->ah[Y_C]: imgb_i->h[Y_C];
 
-    ctx->w = (imgb->aw[Y_C] > 0)? imgb->aw[Y_C]: imgb->w[Y_C];
-    ctx->h = (imgb->ah[Y_C] > 0)? imgb->ah[Y_C]: imgb->h[Y_C];
-
-    ctx->fn_img_pad(ctx, imgb);
+    ctx->fn_img_pad(ctx, imgb_i);
 
     for (int i = 0; i < ctx->num_tiles; i++) {
-        ctx->tile_stat[i] = ENC_TILE_STAT_NOT_ENCODED;
+        ctx->tile[i].stat = ENC_TILE_STAT_NOT_ENCODED;
     }
 
-    ctx->imgb = imgb;
+    ctx->imgb = imgb_i;
     imgb_addref(ctx->imgb);
-    if (rec)
-    {
-        for (int c = 0; c < ctx->num_comp; c++)
-        {
-            rec->w[c] = imgb->w[c];
-            rec->h[c] = imgb->h[c];
-            rec->x[c] = imgb->x[c];
-            rec->y[c] = imgb->y[c];
+    if (imgb_r != NULL) {
+        for (int c = 0; c < ctx->num_comp; c++) {
+            imgb_r->w[c] = imgb_i->w[c];
+            imgb_r->h[c] = imgb_i->h[c];
+            imgb_r->x[c] = imgb_i->x[c];
+            imgb_r->y[c] = imgb_i->y[c];
         }
-        ctx->rec = rec;
+        ctx->rec = imgb_r;
         imgb_addref(ctx->rec);
     }
 
     int buf_size = ctx->cdesc.max_bs_buf_size / ctx->num_tiles;
-    ctx->ti[0].max_data_size = buf_size;
+    ctx->tile[0].bs_buf_max = buf_size;
     for (int i = 1; i < ctx->num_tiles; i++)
     {
-        ctx->bs_temp_buf[i] = ctx->bs_temp_buf[i - 1] + buf_size;
-        ctx->ti[i].max_data_size = buf_size;
+        ctx->tile[i].bs_buf = ctx->tile[i - 1].bs_buf + buf_size;
+        ctx->tile[i].bs_buf_max = buf_size;
+    }
+
+    for (int i = 0; i < ctx->cdesc.threads; i++)
+    {
+        ctx->core[i]->ctx = ctx;
+        ctx->core[i]->thread_idx = i;
     }
 
     return OAPV_OK;
 }
 
-static int enc_finish(oapve_ctx_t *ctx, oapve_stat_t *stat)
+static int enc_frm_finish(oapve_ctx_t *ctx, oapve_stat_t *stat)
 {
-    /* de-init BSW */
-    oapv_bsw_deinit(&ctx->bs);
-
-    stat->write = bsw_get_write_byte(&ctx->bs);
-
     imgb_release(ctx->imgb);
     if (ctx->rec)
     {
@@ -897,7 +1193,6 @@ static int enc_finish(oapve_ctx_t *ctx, oapve_stat_t *stat)
 static int enc_frame(oapve_ctx_t *ctx)
 {
     oapv_bs_t *bs = &ctx->bs;
-    //u8 *bs_cur_frame_size; // TODO : remove
     int ret = OAPV_OK;
 
     oapv_bs_t  bs_fh;
@@ -910,15 +1205,7 @@ static int enc_frame(oapve_ctx_t *ctx)
     /* de-init BSW */
     oapv_bsw_deinit(bs);
 
-    /* Tile wise encoding */
-    oapv_tpool_t *tpool;
-    int res;
-    tpool = ctx->tpool;
-    int parallel_task = 1;
-    int tidx = 0, thread_num1 = 0;
-
-
-    // RC init
+    /* rc init */
     u64 cost_sum = 0;
     if (ctx->param->rc_type != 0)
     {
@@ -927,8 +1214,8 @@ static int enc_frame(oapve_ctx_t *ctx)
         double bits_pic = ((double)ctx->param->bitrate * 1000) / ((double)ctx->param->fps_num / ctx->param->fps_den);
         for (int i = 0; i < ctx->num_tiles; i++)
         {
-            ctx->ti[i].rc.target_bits_left = bits_pic * ctx->ti[i].rc.cost / cost_sum;
-            ctx->ti[i].rc.target_bits = ctx->ti[i].rc.target_bits_left;
+            ctx->tile[i].rc.target_bits_left = bits_pic * ctx->tile[i].rc.cost / cost_sum;
+            ctx->tile[i].rc.target_bits = ctx->tile[i].rc.target_bits_left;
         }
 
         ctx->rc_param.lambda = oapve_rc_estimate_pic_lambda(ctx, cost_sum);
@@ -947,20 +1234,15 @@ static int enc_frame(oapve_ctx_t *ctx)
         }
     }
 
-    // Code for CTU parallel encoding
-    parallel_task = (ctx->cdesc.threads > ctx->num_tiles) ? ctx->num_tiles : ctx->cdesc.threads;
+    oapv_tpool_t* tpool = ctx->tpool;
+    int res, tidx = 0, thread_num1 = 0;
+    int parallel_task = (ctx->cdesc.threads > ctx->num_tiles) ? ctx->num_tiles : ctx->cdesc.threads;
 
-    for (int i = 0; i < ctx->cdesc.threads; i++) {
-        ctx->tile_stat[i] = ENC_TILE_STAT_ON_ENCODING;
-    }
-    // run new threads
+    /* encode tiles ************************************/
     for (tidx = 0; tidx < (parallel_task - 1); tidx++) {
-        enc_core_init(ctx->core[tidx], ctx, tidx, tidx);
         tpool->run(ctx->thread_id[tidx], enc_thread_tile,
                 (void *) ctx->core[tidx]);
     }
-    // use main thread
-    enc_core_init(ctx->core[tidx], ctx, tidx, tidx);
     ret = enc_thread_tile((void *) ctx->core[tidx]);
     oapv_assert_g(OAPV_SUCCEEDED(ret), ERR);
 
@@ -969,12 +1251,13 @@ static int enc_frame(oapve_ctx_t *ctx)
         oapv_assert_gv (res==TPOOL_SUCCESS, ret, OAPV_ERR_FAILED_SYSCALL, ERR);
         oapv_assert_g(OAPV_SUCCEEDED(ret), ERR);
     }
+    /****************************************************/
 
     for (int i = 0; i < ctx->num_tiles; i++)
     {
-        oapv_mcpy(ctx->bs.cur, ctx->bs_temp_buf[i], ctx->bs_temp_size[i]);
-        ctx->bs.cur = ctx->bs.cur + ctx->bs_temp_size[i];
-        ctx->fh.tile_size[i] = ctx->bs_temp_size[i] - OAPV_TILE_SIZE_LEN;
+        oapv_mcpy(ctx->bs.cur, ctx->tile[i].bs_buf, ctx->tile[i].bs_size);
+        ctx->bs.cur = ctx->bs.cur + ctx->tile[i].bs_size;
+        ctx->fh.tile_size[i] = ctx->tile[i].bs_size - OAPV_TILE_SIZE_LEN;
     }
 
     /* rewrite frame header */
@@ -998,11 +1281,12 @@ static int enc_platform_init(oapve_ctx_t * ctx)
     ctx->fn_sad               = oapv_tbl_sad_16b;
     ctx->fn_ssd               = oapv_tbl_ssd_16b;
     ctx->fn_diff              = oapv_tbl_diff_16b;
-    ctx->fn_itx                 = oapv_tbl_fn_itx;
-    ctx->fn_txb                 = oapv_tbl_fn_tx;
-    ctx->fn_quantb              = oapv_tbl_fn_quant;
-    ctx->fn_had8x8              = oapv_dc_removed_had8x8;
-
+    ctx->fn_itx               = oapv_tbl_fn_itx;
+    ctx->fn_itx_adj           = oapv_tbl_fn_itx_adj;
+    ctx->fn_txb               = oapv_tbl_fn_tx;
+    ctx->fn_quant             = oapv_tbl_fn_quant;
+    ctx->fn_dquant            = oapv_tbl_fn_dquant;
+    ctx->fn_had8x8            = oapv_dc_removed_had8x8;
 #if X86_SSE
     int check_cpu, support_sse, support_avx2;
 
@@ -1013,34 +1297,37 @@ static int enc_platform_init(oapve_ctx_t * ctx)
     if (support_avx2)
     {
         ctx->fn_sad               = oapv_tbl_sad_16b_avx;
-        ctx->fn_ssd               = oapv_tbl_ssd_16b_sse;
+        ctx->fn_ssd               = oapv_tbl_ssd_16b_avx;
         ctx->fn_diff              = oapv_tbl_diff_16b_sse;
-        ctx->fn_itx                 = oapv_tbl_fn_itx_avx;
-        ctx->fn_txb                 = oapv_tbl_txb_avx;
-        ctx->fn_quantb              = oapv_tbl_quantb_avx;
-        ctx->fn_iquant              = oapv_tbl_fn_iquant_avx;
-        ctx->fn_had8x8              = oapv_dc_removed_had8x8_sse;
+        ctx->fn_itx               = oapv_tbl_fn_itx_avx;
+        ctx->fn_itx_adj           = oapv_tbl_fn_itx_adj_avx;
+        ctx->fn_txb               = oapv_tbl_txb_avx;
+        ctx->fn_quant             = oapv_tbl_quantb_avx;
+        ctx->fn_dquant            = oapv_tbl_fn_dquant_avx;
+        ctx->fn_had8x8            = oapv_dc_removed_had8x8_sse;
     }
     else if (support_sse)
     {
         ctx->fn_sad               = oapv_tbl_sad_16b_sse;
         ctx->fn_ssd               = oapv_tbl_ssd_16b_sse;
         ctx->fn_diff              = oapv_tbl_diff_16b_sse;
-        ctx->fn_itx                 = oapv_tbl_fn_itx;
-        ctx->fn_txb                 = oapv_tbl_fn_tx;
-        ctx->fn_quantb              = oapv_tbl_fn_quant;
-        ctx->fn_iquant              = oapv_tbl_fn_iquant;
-        ctx->fn_had8x8              = oapv_dc_removed_had8x8_sse;
+        ctx->fn_itx               = oapv_tbl_fn_itx;
+        ctx->fn_itx_adj           = oapv_tbl_fn_itx_adj;
+        ctx->fn_txb               = oapv_tbl_fn_tx;
+        ctx->fn_quant             = oapv_tbl_fn_quant;
+        ctx->fn_dquant            = oapv_tbl_fn_dquant;
+        ctx->fn_had8x8            = oapv_dc_removed_had8x8_sse;
     }
 #elif ARM_NEON
-    ctx->fn_sad               = oapv_tbl_sad_16b_neon;
-    ctx->fn_ssd               = oapv_tbl_ssd_16b_neon;
-    ctx->fn_diff              = oapv_tbl_diff_16b_neon;
-    ctx->fn_itx                 = oapv_tbl_fn_itx;
-    ctx->fn_txb                 = oapv_tbl_fn_txb_neon;
-    ctx->fn_quantb              = oapv_tbl_quantb_neon;
-    ctx->fn_iquant              = oapv_tbl_fn_iquant;
-    ctx->fn_had8x8              = oapv_dc_removed_had8x8;
+    ctx->fn_sad                   = oapv_tbl_sad_16b_neon;
+    ctx->fn_ssd                   = oapv_tbl_ssd_16b_neon;
+    ctx->fn_diff                  = oapv_tbl_diff_16b_neon;
+    ctx->fn_itx                   = oapv_tbl_fn_itx;
+    ctx->fn_itx_adj               = oapv_tbl_fn_itx_adj;
+    ctx->fn_txb                   = oapv_tbl_fn_txb_neon;
+    ctx->fn_quant                 = oapv_tbl_quantb_neon;
+    ctx->fn_dquant                = oapv_tbl_fn_dquant;
+    ctx->fn_had8x8                = oapv_dc_removed_had8x8;
 #endif
     return OAPV_OK;
 }
@@ -1050,22 +1337,13 @@ oapve_t oapve_create(oapve_cdesc_t *cdesc, int *err)
     oapve_ctx_t *ctx;
     int ret;
 
-#if ENC_DEC_TRACE
-    fp_trace = fopen("enc_trace.txt", "w+");
-#if TRACE_HLS
-    OAPV_TRACE_SET(1);
-#endif
-#endif
-
+    DUMP_CREATE(1);
     /* memory allocation for ctx and core structure */
     ctx = (oapve_ctx_t *)enc_ctx_alloc();
     if (ctx != NULL)
     {
         oapv_mcpy(&ctx->cdesc, cdesc, sizeof(oapve_cdesc_t));
         ret = enc_platform_init(ctx);
-        oapv_assert_g(ret == OAPV_OK, ERR);
-
-        ret = oapve_create_bs_buf(ctx, cdesc->max_bs_buf_size); // create bitstream buffer
         oapv_assert_g(ret == OAPV_OK, ERR);
 
         ret = enc_ready(ctx);
@@ -1087,7 +1365,6 @@ oapve_t oapve_create(oapve_cdesc_t *cdesc, int *err)
 ERR:
     if (ctx)
     {
-        oapve_delete_bs_buf(ctx);
         enc_ctx_free(ctx);
     }
     if (err)
@@ -1104,11 +1381,8 @@ void oapve_delete(oapve_t eid)
     ctx = enc_id_to_ctx(eid);
     oapv_assert_r(ctx);
 
-#if ENC_DEC_TRACE
-    fclose(fp_trace);
-#endif
+    DUMP_DELETE();
     enc_flush(ctx);
-    oapve_delete_bs_buf(ctx);
     enc_ctx_free(ctx);
 }
 
@@ -1127,47 +1401,61 @@ int oapve_encode(oapve_t eid, oapv_frms_t* ifrms, oapvm_t mid, oapv_bitb_t* bitb
     oapv_bsw_init(bs, bitb->addr, bitb->bsize, NULL);
     oapv_mset(stat, 0, sizeof(oapve_stat_t));
 
-    u8* bs_pos_au_size = oapv_bsw_sink(bs); // address syntax of au size
+    u8* bs_pos_au_beg = oapv_bsw_sink(bs); // address syntax of au size
     u8* bs_pos_pbu_beg;
+    oapv_bs_t bs_pbu_beg;
     oapv_bsw_write(bs, 0, 32);
 
     for (i = 0; i < ifrms->num_frms; i++)
     {
         frm = &ifrms->frm[i];
 
-            /* set default value for encoding parameter */
+        /* set default value for encoding parameter */
         ctx->param = &ctx->cdesc.param[i];
-        ret = enc_init_param(ctx, ctx->param);
+        ret = enc_read_param(ctx, ctx->param);
         oapv_assert_rv(ret == OAPV_OK, OAPV_ERR);
 
         oapv_assert_rv(ctx->param->profile_idc == OAPV_PROFILE_422_10, OAPV_ERR_UNSUPPORTED);
 
         // prepare for encoding a frame
-        ret = enc_prepare(ctx, frm->imgb, bitb, rfrms->frm[i].imgb);
+        ret = enc_frm_prepare(ctx, frm->imgb, (rfrms != NULL)? rfrms->frm[i].imgb: NULL);
         oapv_assert_rv(ret == OAPV_OK, ret);
 
-        bs_pos_pbu_beg = oapv_bsw_sink(bs); /* store pbu pos of ai to re-write */
+        bs_pos_pbu_beg = oapv_bsw_sink(bs); /* store pbu pos to calculate size */
+        oapv_mcpy(&bs_pbu_beg, bs, sizeof(oapv_bs_t)); /* store pbu pos of ai to re-write */
+
+        DUMP_SAVE(0);
         oapve_vlc_pbu_size(bs, 0);
         oapve_vlc_pbu_header(bs, frm->pbu_type, frm->group_id);
         // encode a frame
         ret = enc_frame(ctx);
         oapv_assert_rv(ret == OAPV_OK, ret);
 
+        // rewrite pbu_size
         int pbu_size = ((u8*)oapv_bsw_sink(bs)) - bs_pos_pbu_beg - 4;
-        oapv_bsw_write_direct(bs_pos_pbu_beg, pbu_size, 32);
+        DUMP_SAVE(1);
+        DUMP_LOAD(0);
+        oapve_vlc_pbu_size(&bs_pbu_beg, pbu_size);
+        DUMP_LOAD(1);
 
         stat->frm_size[i] = pbu_size + 4/* PUB size length*/;
         copy_fi_to_finfo(&ctx->fh.fi, frm->pbu_type, frm->group_id, &stat->aui.frm_info[i]);
 
         // add frame hash value of reconstructed frame into metadata list
-        if (ctx->use_frm_hash &&
-            (frm->pbu_type == OAPV_PBU_TYPE_PRIMARY_FRAME ||
-            frm->pbu_type == OAPV_PBU_TYPE_NON_PRIMARY_FRAME)) {
-            oapv_assert_rv(mid != NULL, OAPV_ERR_INVALID_ARGUMENT);
-            ret = oapv_set_md5_pld(mid, frm->group_id, ctx->rec);
-            oapv_assert_rv(OAPV_SUCCEEDED(ret), ret);
+        if (ctx->use_frm_hash) {
+            if (frm->pbu_type == OAPV_PBU_TYPE_PRIMARY_FRAME ||
+                frm->pbu_type == OAPV_PBU_TYPE_NON_PRIMARY_FRAME) {
+                oapv_assert_rv(mid != NULL, OAPV_ERR_INVALID_ARGUMENT);
+                ret = oapv_set_md5_pld(mid, frm->group_id, ctx->rec);
+                oapv_assert_rv(OAPV_SUCCEEDED(ret), ret);
+            }
         }
+
+        // finishing of encoding a frame
+        ret = enc_frm_finish(ctx, stat);
+        oapv_assert_rv(ret == OAPV_OK, ret);
     }
+    stat->aui.num_frms = ifrms->num_frms;
 
     oapvm_ctx_t* md_list = mid;
     if (md_list!=NULL)
@@ -1176,21 +1464,28 @@ int oapve_encode(oapve_t eid, oapv_frms_t* ifrms, oapvm_t mid, oapv_bitb_t* bitb
         for (i = 0; i < num_md; i++)
         {
             int group_id = md_list->group_ids[i];
-            bs_pos_pbu_beg = oapv_bsw_sink(bs); /* store pbu pos of ai to re-write */
+            bs_pos_pbu_beg = oapv_bsw_sink(bs); /* store pbu pos to calculate size */
+            oapv_mcpy(&bs_pbu_beg, bs, sizeof(oapv_bs_t)); /* store pbu pos of ai to re-write */
+            DUMP_SAVE(0);
+
             oapve_vlc_pbu_size(bs, 0);
             oapve_vlc_pbu_header(bs, OAPV_PBU_TYPE_METADATA, group_id);
             oapve_vlc_metadata(&md_list->md_arr[i], bs);
+
+            // rewrite pbu_size
             int pbu_size = ((u8*)oapv_bsw_sink(bs)) - bs_pos_pbu_beg - 4;
-            oapv_bsw_write_direct(bs_pos_pbu_beg, pbu_size, 32);
+            DUMP_SAVE(1);
+            DUMP_LOAD(0);
+            oapve_vlc_pbu_size(&bs_pbu_beg, pbu_size);
+            DUMP_LOAD(1);
         }
     }
 
-    int au_size = (int)((u8*)oapv_bsw_sink(bs) - bs_pos_au_size) - 4;
-    oapv_bsw_write_direct(bs_pos_au_size, au_size, 32); /* u(32) */
+    int au_size = (int)((u8*)oapv_bsw_sink(bs) - bs_pos_au_beg) - 4;
+    oapv_bsw_write_direct(bs_pos_au_beg, au_size, 32); /* u(32) */
 
-    // finishing of encoding a frame
-    ret = enc_finish(ctx, stat);
-    oapv_assert_rv(ret == OAPV_OK, ret);
+    oapv_bsw_deinit(&ctx->bs); /* de-init BSW */
+    stat->write = bsw_get_write_byte(&ctx->bs);
 
     return OAPV_OK;
 }
@@ -1338,28 +1633,17 @@ static void dec_core_free(oapvd_core_t *core)
     oapv_mfree_fast(core);
 }
 
-static int dec_block(oapvd_ctx_t* ctx, oapvd_core_t* core, int x, int y, int log2_w, int log2_h, int c)
+static int dec_block(oapvd_ctx_t* ctx, oapvd_core_t* core, int log2_w, int log2_h, int c)
 {
-    int bit_depth = OAPV_CS_GET_BIT_DEPTH(ctx->imgb->cs);
+    int bit_depth = ctx->bit_depth;
 
-    int b_w = 1 << log2_w;
-    int b_h = 1 << log2_h;
-
+    // DC prediction
     core->coef[0] += core->prev_dc[c];
     core->prev_dc[c] = core->coef[0];
-
-    int dqscale = oapv_tbl_dq_scale[core->qp[c] % 6];
-
-    int shift = bit_depth - 2 - (core->qp[c] / 6);
-
-    ctx->fn_iquant[0](core->coef, core->q_matrix_dec[c], 3, 3, dqscale, shift);
-
-    oapv_itrans(ctx->fn_itx, core->coef, 3, 3, bit_depth);
-
-    plus_mid_val(core->coef, b_w, b_h, bit_depth);
-    // store to output
-    ctx->fn_block_to_imgb(core->coef, c, x, y, b_w, b_h, ctx->imgb);
-
+    // Inverse quantization
+    ctx->fn_dquant[0](core->coef, core->q_mat[c], log2_w, log2_h, core->dq_scale[c], core->dq_shift[c]);
+    // Inverse transform
+    oapv_itrans(ctx->fn_itx, core->coef, log2_w, log2_h, bit_depth);
     return OAPV_OK;
 }
 
@@ -1387,22 +1671,34 @@ static int dec_frame_prepare(oapvd_ctx_t* ctx, oapv_imgb_t* imgb)
     ctx->imgb = imgb;
     imgb_addref(ctx->imgb); // increase reference count
 
-    if (OAPV_CS_GET_FORMAT(imgb->cs) == OAPV_CF_PLANAR2)
-    {
-        ctx->fn_block_to_imgb = block_to_imgb_p210;
-    }
-    else
-    {
-        ctx->fn_block_to_imgb = block_to_imgb;
-    }
-
+    ctx->bit_depth = ctx->fh.fi.bit_depth;
     ctx->cfi = ctx->fh.fi.chroma_format_idc;
     ctx->num_comp = get_num_comp(ctx->cfi);
-    ctx->ch_sft_w = get_chroma_sft_w(ctx->cfi);
-    ctx->ch_sft_h = get_chroma_sft_h(ctx->cfi);
+    ctx->comp_sft[Y_C][0] = 0;
+    ctx->comp_sft[Y_C][1] = 0;
+
+    for (int c = 1; c < ctx->num_comp; c++)
+    {
+        ctx->comp_sft[c][0] = get_chroma_sft_w(color_format_to_chroma_format_idc(OAPV_CS_GET_FORMAT(imgb->cs)));
+        ctx->comp_sft[c][1] = get_chroma_sft_h(color_format_to_chroma_format_idc(OAPV_CS_GET_FORMAT(imgb->cs)));
+    }
 
     ctx->w = oapv_align_value(ctx->fh.fi.frame_width, OAPV_MB_W);
     ctx->h = oapv_align_value(ctx->fh.fi.frame_height, OAPV_MB_H);
+
+    if (OAPV_CS_GET_FORMAT(imgb->cs) == OAPV_CF_PLANAR2)
+    {
+        ctx->fn_block_to_imgb[Y_C] = block_to_imgb_p210_y;
+        ctx->fn_block_to_imgb[U_C] = block_to_imgb_p210_uv;
+        ctx->fn_block_to_imgb[V_C] = block_to_imgb_p210_uv;
+    }
+    else
+    {
+        for (int c = 0; c < ctx->num_comp; c++)
+        {
+            ctx->fn_block_to_imgb[c] = block_to_imgb_10bit;
+        }
+    }
 
     int tile_w = ctx->fh.tile_width_in_mbs * OAPV_MB_W;
     int tile_h = ctx->fh.tile_height_in_mbs * OAPV_MB_H;
@@ -1431,51 +1727,45 @@ static int dec_frame_finish(oapvd_ctx_t *ctx)
     return OAPV_OK;
 }
 
-static int dec_tile_comp(oapvd_tile_t * tile, oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, int c)
+static int dec_tile_comp(oapvd_tile_t * tile, oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, int c, int s_dst, void * dst)
 {
-    int h_mb, w_mb, h_blk, w_blk, ty, tx, by, bx, cx, cy;
+    int mb_h, mb_w, mb_y, mb_x, blk_y, blk_x;
+    int le, ri, to, bo;
     int ret;
-    OAPV_TRACE_SET(1);
+    s16 * d16;
 
-    h_mb = OAPV_MB_H >> (c ? ctx->ch_sft_h : 0);
-    w_mb = OAPV_MB_W >> (c ? ctx->ch_sft_w : 0);
+    mb_h = OAPV_MB_H >> ctx->comp_sft[c][1];
+    mb_w = OAPV_MB_W >> ctx->comp_sft[c][0];
 
-    for (ty = 0; ty < tile->h && tile->y + ty < ctx->h; ty += OAPV_MB_H)
+    le = tile->x >> ctx->comp_sft[c][0]; // left position of tile
+    ri = (tile->w >> ctx->comp_sft[c][0]) + le; // right pixel position of tile
+    to = tile->y >> ctx->comp_sft[c][1]; // top pixel position of tile
+    bo = (tile->h >> ctx->comp_sft[c][1]) + to; // bottom pixel position of tile
+
+    for (mb_y = to; mb_y < bo; mb_y += mb_h)
     {
-        for (tx = 0; tx < tile->w; tx += OAPV_MB_W)
+        for (mb_x = le; mb_x < ri; mb_x += mb_w)
         {
-            h_blk = 1 << OAPV_LOG2_BLK_H;
-            w_blk = 1 << OAPV_LOG2_BLK_W;
-
-            for (by = 0; by < h_mb; by += h_blk)
+            for (blk_y = mb_y; blk_y < (mb_y + mb_h); blk_y += OAPV_BLK_H)
             {
-                for (bx = 0; bx < w_mb; bx += w_blk)
+                for (blk_x = mb_x; blk_x < (mb_x + mb_w); blk_x += OAPV_BLK_W)
                 {
-                    cx = (tile->x + tx) + (bx << (c ? ctx->ch_sft_w : 0));
-                    cy = (tile->y + ty) + (by << (c ? ctx->ch_sft_h : 0));
-
-#if ENC_DEC_TRACE
-                    OAPV_TRACE_SET(TRACE_COEF_BIN);
-                    OAPV_TRACE_COUNTER;
-                    OAPV_TRACE_STR("x pos ");
-                    OAPV_TRACE_INT(cx);
-                    OAPV_TRACE_STR("y pos ");
-                    OAPV_TRACE_INT(cy);
-                    OAPV_TRACE_STR("width ");
-                    OAPV_TRACE_INT(h_blk);
-                    OAPV_TRACE_STR("height ");
-                    OAPV_TRACE_INT(w_blk);
-                    OAPV_TRACE_STR("CH ");
-                    OAPV_TRACE_STR((c == 0 ? "Y" : (c == 1 ? "U" : "V")));
-                    OAPV_TRACE_STR("\n");
-#endif
-
+                    // parse DC coefficient
                     ret = oapvd_vlc_dc_coeff(ctx, core, bs, &core->coef[0], c);
                     oapv_assert_rv(OAPV_SUCCEEDED(ret), ret);
+
+                    // parse AC coefficient
                     ret = oapvd_vlc_ac_coeff(ctx, core, bs, core->coef, c);
                     oapv_assert_rv(OAPV_SUCCEEDED(ret), ret);
-                    ret = dec_block(ctx, core, cx, cy, OAPV_LOG2_BLK_W, OAPV_LOG2_BLK_H, c);
+                    DUMP_COEF(core->coef, OAPV_BLK_D, blk_x, blk_y, c);
+
+                    // decode a block
+                    ret = dec_block(ctx, core, OAPV_LOG2_BLK_W, OAPV_LOG2_BLK_H, c);
                     oapv_assert_rv(OAPV_SUCCEEDED(ret), ret);
+
+                    // copy decoded block to image buffer
+                    d16 = (s16*)((u8*)dst + blk_y*s_dst) + blk_x;
+                    ctx->fn_block_to_imgb[c](core->coef, OAPV_BLK_W, OAPV_BLK_H, (OAPV_BLK_W << 1), blk_x, s_dst, d16);
                 }
             }
         }
@@ -1488,40 +1778,56 @@ static int dec_tile_comp(oapvd_tile_t * tile, oapvd_ctx_t* ctx, oapvd_core_t* co
 
 static int dec_tile(oapvd_core_t* core, oapvd_tile_t * tile)
 {
-    int ret;
+    int ret, midx, x, y, c;
     oapvd_ctx_t *ctx = core->ctx;
     oapv_bs_t bs;
 
     oapv_bsr_init(&bs, tile->bs_beg + OAPV_TILE_SIZE_LEN, tile->data_size, NULL);
     oapvd_vlc_tile_header(&bs, ctx, &tile->th);
 
-    int cnt_dec = 0;
-    for (int cidx = 0; cidx < ctx->num_comp; cidx++)
+    for (c = 0; c < ctx->num_comp; c++)
     {
-        cnt_dec = 0;
-        int qp_dec = tile->th.tile_qp[cidx];
-        int dqscale = oapv_tbl_dq_scale[qp_dec % 6];
-        for (int y = 0; y < OAPV_BLK_H; y++)
+        core->qp[c] = tile->th.tile_qp[c];
+        core->dq_scale[c] = oapv_tbl_dq_scale[core->qp[c] % 6];
+        core->dq_shift[c] = ctx->bit_depth - 2 - (core->qp[c] / 6);
+
+        core->prev_dc_ctx[c] = 20;
+        core->prev_1st_ac_ctx[c] = 0;
+        core->prev_dc[c] = 0;
+
+        midx = 0;
+        for (y = 0; y < OAPV_BLK_H; y++)
         {
-            for (int x = 0; x < OAPV_BLK_W; x++)
+            for (x = 0; x < OAPV_BLK_W; x++)
             {
-                core->q_matrix_dec[cidx][cnt_dec++] = dqscale * ctx->fh.q_matrix[cidx][y][x];
+                core->q_mat[c][midx++] = core->dq_scale[c] * ctx->fh.q_matrix[c][y][x];
             }
         }
     }
 
-    for (int c = 0; c < ctx->num_comp; c++)
+    for (c = 0; c < ctx->num_comp; c++)
     {
-        core->prev_dc_ctx[c] = 20;
-        core->prev_1st_ac_ctx[c] = 0;
-        core->prev_dc[c] = 0;
-        core->qp[c] = tile->th.tile_qp[c];
-        ret = dec_tile_comp(tile, ctx, core, &bs, c);
+        int tc, s_dst;
+        s16* dst;
+
+        if (OAPV_CS_GET_FORMAT(ctx->imgb->cs) == OAPV_CF_PLANAR2)
+        {
+            tc = c > 0 ? 1 : 0;
+            dst = ctx->imgb->a[tc];
+            dst += (c > 1)? 1: 0;
+            s_dst = ctx->imgb->s[tc];
+        }
+        else
+        {
+            dst = ctx->imgb->a[c];
+            s_dst = ctx->imgb->s[c];
+        }
+
+        ret = dec_tile_comp(tile, ctx, core, &bs, c, s_dst, dst);
         oapv_assert_rv(OAPV_SUCCEEDED(ret), ret);
     }
 
     oapvd_vlc_tile_dummy_data(&bs);
-    tile->stat = DEC_TILE_STAT_DECODED;
     return OAPV_OK;
 }
 
@@ -1582,6 +1888,9 @@ static int dec_thread_tile(void* arg)
         ret = dec_tile(core, &tile[tile_idx]);
         oapv_assert_g(OAPV_SUCCEEDED(ret), ERR);
 
+        oapv_tpool_enter_cs(ctx->sync_obj);
+        tile[tile_idx].stat = DEC_TILE_STAT_DECODED;
+        oapv_tpool_leave_cs(ctx->sync_obj);
     }
     return OAPV_OK;
 
@@ -1668,7 +1977,7 @@ static int dec_platform_init(oapvd_ctx_t * ctx)
 {
     // default settings
     ctx->fn_itx = oapv_tbl_fn_itx;
-    ctx->fn_iquant = oapv_tbl_fn_iquant;
+    ctx->fn_dquant = oapv_tbl_fn_dquant;
 
 #if X86_SSE
     int check_cpu, support_sse, support_avx2;
@@ -1680,16 +1989,16 @@ static int dec_platform_init(oapvd_ctx_t * ctx)
     if (support_avx2)
     {
         ctx->fn_itx = oapv_tbl_fn_itx_avx;
-        ctx->fn_iquant = oapv_tbl_fn_iquant_avx;
+        ctx->fn_dquant = oapv_tbl_fn_dquant_avx;
     }
     else if (support_sse)
     {
         ctx->fn_itx = oapv_tbl_fn_itx;
-        ctx->fn_iquant = oapv_tbl_fn_iquant;
+        ctx->fn_dquant = oapv_tbl_fn_dquant;
     }
 #elif ARM_NEON
     ctx->fn_itx = oapv_tbl_fn_itx;
-    ctx->fn_iquant = oapv_tbl_fn_iquant;
+    ctx->fn_dquant = oapv_tbl_fn_dquant;
 #endif
     return OAPV_OK;
 }
@@ -1699,12 +2008,7 @@ oapvd_t oapvd_create(oapvd_cdesc_t *cdesc, int *err)
     oapvd_ctx_t *ctx;
     int ret;
 
-#if ENC_DEC_TRACE
-    fp_trace = fopen("dec_trace.txt", "w+");
-#if TRACE_HLS
-    OAPV_TRACE_SET(1);
-#endif
-#endif
+    DUMP_CREATE(0);
     ctx = NULL;
 
     /* memory allocation for ctx and core structure */
@@ -1746,9 +2050,7 @@ void oapvd_delete(oapvd_t did)
     ctx = dec_id_to_ctx(did);
     oapv_assert_r(ctx);
 
-#if ENC_DEC_TRACE
-    fclose(fp_trace);
-#endif
+    DUMP_DELETE();
     dec_flush(ctx);
     dec_ctx_free(ctx);
 }
@@ -1772,7 +2074,6 @@ int oapvd_decode(oapvd_t did, oapv_bitb_t *bitb, oapv_frms_t* ofrms, oapvm_t mid
 
     while (remain > 8)
     {
-        OAPV_TRACE_SET(TRACE_HLS);
         oapv_bsr_init(&ctx->bs, curpos, remain, NULL);
         bs = &ctx->bs;
 
@@ -1888,6 +2189,7 @@ int oapvd_info(void* au, int au_size, oapv_au_info_t* aui)
     curpos = (u8*)au;
     remain = au_size;
 
+    DUMP_SET(0);
     while(remain > 8) // FIX-ME (8byte?)
     {
         u32 pbu_size = 0;
@@ -1936,6 +2238,7 @@ int oapvd_info(void* au, int au_size, oapv_au_info_t* aui)
 
         ++pbu_cnt;
     }
+    DUMP_SET(1);
     return OAPV_OK;
 }
 

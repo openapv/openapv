@@ -1,6 +1,6 @@
 ![OAPV](/readme/img/oapv_logo_bar_256.png)
 # OpenAPV (Open Advanced Professional Video Codec)
-|
+
 [![Build and test](https://github.com/openapv/openapv/actions/workflows/build.yml/badge.svg)](https://github.com/openapv/openapv/actions/workflows/build.yml)
 
 OpenAPV provides the reference implementation of the [APV codec](#apv-codec) which can be used to record professional-grade video and associated metadata without quality degradation. OpenAPV is free and open source software provided by [LICENSE](#license).

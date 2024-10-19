@@ -30,7 +30,7 @@
  */
 
 #include "oapv_def.h"
-
+#include <math.h>
 #if ARM_NEON
 #include "sse2neon.h"
 

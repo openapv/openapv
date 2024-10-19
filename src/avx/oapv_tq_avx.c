@@ -288,7 +288,7 @@ const oapv_fn_itx_t oapv_tbl_fn_itx_avx[2] =
         NULL
 };
 
-static int oapv_quant_nnz_avx(u8 qp, int q_matrix[OAPV_BLK_H * OAPV_BLK_W], s16 *coef, int log2_w, int log2_h,
+static int oapv_quant_nnz_avx(u8 qp, int q_matrix[OAPV_BLK_D], s16 *coef, int log2_w, int log2_h,
                              u16 scale, int ch_type, int bit_depth, int deadzone_offset)
 {
     int nnz = 0;
@@ -351,7 +351,7 @@ const oapv_fn_quant_t oapv_tbl_quantb_avx[2] =
 };
 
 
-static void oapv_dquant_avx(s16 *coef, int q_matrix[OAPV_BLK_H * OAPV_BLK_W], int log2_w, int log2_h, int scale, s8 shift)
+static void oapv_dquant_avx(s16 *coef, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h, int scale, s8 shift)
 {
     int i;
     int pixels = (1 << (log2_w + log2_h));
@@ -409,8 +409,31 @@ static void oapv_dquant_avx(s16 *coef, int q_matrix[OAPV_BLK_H * OAPV_BLK_W], in
         }
     }
 }
-const oapv_fn_iquant_t oapv_tbl_fn_iquant_avx[2] =
+const oapv_fn_dquant_t oapv_tbl_fn_dquant_avx[2] =
     {
         oapv_dquant_avx,
             NULL,
+};
+
+void oapv_adjust_itrans_avx(int* src, int* dst, int itrans_diff_idx, int diff_step, int shift)
+{
+    __m256i v0 = _mm256_set1_epi32(diff_step);
+    __m256i v1 = _mm256_set1_epi32(1 << (shift - 1));
+    __m256i s0, s1;
+
+    for (int j = 0; j < 64; j += 8) {
+        s0 = _mm256_loadu_si256((const __m256i*)(src + j));
+        s1 = _mm256_loadu_si256((const __m256i*)(oapv_itrans_diff[itrans_diff_idx] + j));
+        s1 = _mm256_mullo_epi32(s1, v0);
+        s1 = _mm256_add_epi32(s1, v1);
+        s1 = _mm256_srai_epi32(s1, shift);
+        s1 = _mm256_add_epi32(s0, s1);
+        _mm256_storeu_si256((__m256i*)(dst + j), s1);
+    }
+}
+
+const oapv_fn_itx_adj_t oapv_tbl_fn_itx_adj_avx[2] =
+{
+    oapv_adjust_itrans_avx,
+        NULL,
 };

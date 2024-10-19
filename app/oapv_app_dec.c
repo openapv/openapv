@@ -36,8 +36,6 @@
 
 #define MAX_BS_BUF          128 * 1024 * 1024 /* byte */
 
-#define MAX_NUM_FRMS        (1)  // supports only 1-frame output
-#define FRM_IDX             (0)  // supports only 1-frame output
 // check generic frame or not
 #define IS_NON_AUX_FRM(frm) (((frm)->pbu_type == OAPV_PBU_TYPE_PRIMARY_FRAME) || ((frm)->pbu_type == OAPV_PBU_TYPE_NON_PRIMARY_FRAME))
 // check auxiliary frame or not
@@ -49,7 +47,7 @@
 // clang-format off
 
 /* define various command line options as a table */
-static const ARGS_OPT dec_args_opts[] = {
+static const args_opt_t dec_args_opts[] = {
     {
         'v',  "verbose", ARGS_VAL_TYPE_INTEGER, 0, NULL,
         "verbose (log) level\n"
@@ -67,8 +65,8 @@ static const ARGS_OPT dec_args_opts[] = {
         "file name of decoded output"
     },
     {
-        ARGS_NO_KEY,  "frames", ARGS_VAL_TYPE_INTEGER, 0, NULL,
-        "maximum number of frames to be decoded"
+        ARGS_NO_KEY,  "max-au", ARGS_VAL_TYPE_INTEGER, 0, NULL,
+        "maximum number of access units to be decoded"
     },
     {
         'm',  "threads", ARGS_VAL_TYPE_INTEGER, 0, NULL,
@@ -95,29 +93,29 @@ static const ARGS_OPT dec_args_opts[] = {
 
 #define NUM_ARGS_OPT        ((int)(sizeof(dec_args_opts) / sizeof(dec_args_opts[0])))
 
-typedef struct {
+typedef struct args_var {
     char fname_inp[256];
     char fname_out[256];
-    int  frames;
+    int  max_au;
     int  hash;
     int  threads;
     int  output_depth;
     int  output_csp;
-} ARGS_VAR;
+} args_var_t;
 
-static ARGS_VAR* args_init_vars(ARGS_PARSER* args)
+static args_var_t *args_init_vars(args_parser_t *args)
 {
-    ARGS_OPT* opts;
-    ARGS_VAR* vars;
+    args_opt_t *opts;
+    args_var_t *vars;
     opts = args->opts;
-    vars = malloc(sizeof(ARGS_VAR));
+    vars = malloc(sizeof(args_var_t));
     assert_rv(vars != NULL, NULL);
-    memset(vars, 0, sizeof(ARGS_VAR));
+    memset(vars, 0, sizeof(args_var_t));
 
     /*args_set_variable_by_key_long(opts, "config", args->fname_cfg);*/
     args_set_variable_by_key_long(opts, "input", vars->fname_inp);
     args_set_variable_by_key_long(opts, "output", vars->fname_out);
-    args_set_variable_by_key_long(opts, "frames", &vars->frames);
+    args_set_variable_by_key_long(opts, "max-au", &vars->max_au);
     args_set_variable_by_key_long(opts, "hash", &vars->hash);
     args_set_variable_by_key_long(opts, "verbose", &op_verbose);
     op_verbose = VERBOSE_SIMPLE; /* default */
@@ -130,12 +128,12 @@ static ARGS_VAR* args_init_vars(ARGS_PARSER* args)
     return vars;
 }
 
-static void print_usage(const char** argv)
+static void print_usage(const char **argv)
 {
-    int          i;
-    char         str[1024];
-    ARGS_VAR*    args_var = NULL;
-    ARGS_PARSER* args;
+    int            i;
+    char           str[1024];
+    args_var_t    *args_var = NULL;
+    args_parser_t *args;
 
     args = args_create(dec_args_opts, NUM_ARGS_OPT);
     if(args == NULL)
@@ -162,7 +160,7 @@ ERR:
         free(args_var);
 }
 
-static int read_au_size(FILE* fp)
+static int read_au_size(FILE *fp)
 {
     unsigned char buf[4];
 
@@ -173,7 +171,7 @@ static int read_au_size(FILE* fp)
     return ((buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | (buf[3]));
 }
 
-static int read_bitstream(FILE* fp, unsigned char* bs_buf, int* bs_buf_size)
+static int read_bitstream(FILE *fp, unsigned char *bs_buf, int *bs_buf_size)
 {
     int           au_size, read_size = 0;
     unsigned char b = 0;
@@ -212,14 +210,14 @@ static int read_bitstream(FILE* fp, unsigned char* bs_buf, int* bs_buf_size)
     return read_size + 4;
 }
 
-static int set_extra_config(oapvd_t id, ARGS_VAR* args_vars)
+static int set_extra_config(oapvd_t id, args_var_t *args_vars)
 {
     int ret, size, value;
 
-    if(args_vars->hash) {  // enable frame hash calculation
+    if(args_vars->hash) { // enable frame hash calculation
         value = 1;
-        size  = 4;
-        ret   = oapvd_config(id, OAPV_CFG_SET_USE_FRM_HASH, &value, &size);
+        size = 4;
+        ret = oapvd_config(id, OAPV_CFG_SET_USE_FRM_HASH, &value, &size);
         if(OAPV_FAILED(ret)) {
             logerr("failed to set config for using frame hash\n");
             return -1;
@@ -228,7 +226,7 @@ static int set_extra_config(oapvd_t id, ARGS_VAR* args_vars)
     return 0;
 }
 
-static int write_dec_img(char* fname, oapv_imgb_t* img, int flag_y4m)
+static int write_dec_img(char *fname, oapv_imgb_t *img, int flag_y4m)
 {
     if(flag_y4m) {
         if(write_y4m_frame_header(fname))
@@ -239,40 +237,69 @@ static int write_dec_img(char* fname, oapv_imgb_t* img, int flag_y4m)
     return 0;
 }
 
-static int check_frm_hash(oapvm_t mid, oapv_imgb_t* imgb, int group_id)
+static int check_frm_hash(oapvm_t mid, oapv_imgb_t *imgb, int group_id)
 {
-    unsigned char uuid_frm_hash[16] = {0xf8, 0x72, 0x1b, 0x3e, 0xcd, 0xee, 0x47, 0x21, 0x98, 0x0d, 0x9b, 0x9e, 0x39, 0x20, 0x28, 0x49};
-    void*         buf;
+    unsigned char uuid_frm_hash[16] = { 0xf8, 0x72, 0x1b, 0x3e, 0xcd, 0xee, 0x47, 0x21, 0x98, 0x0d, 0x9b, 0x9e, 0x39, 0x20, 0x28, 0x49 };
+    void         *buf;
     int           size;
     if(OAPV_SUCCEEDED(oapvm_get(mid, group_id, OAPV_METADATA_USER_DEFINED, &buf, &size, uuid_frm_hash))) {
         if(size != (imgb->np * 16) /* hash */ + 16 /* uuid */) {
-            return 1;  // unexpected error
+            return 1; // unexpected error
         }
         for(int i = 0; i < imgb->np; i++) {
-            if(memcmp((unsigned char*)buf + ((i + 1) * 16), imgb->hash[i], 16) != 0) {
-                return -1;  // frame hash is mismatched
+            if(memcmp((unsigned char *)buf + ((i + 1) * 16), imgb->hash[i], 16) != 0) {
+                return -1; // frame hash is mismatched
             }
         }
-        return 0;  // frame hash is correct
+        return 0; // frame hash is correct
     }
-    return 1;  // frame hash data is not available
+    return 1; // frame hash data is not available
 }
 
-static void print_stat_au(oapvd_stat_t* stat, int au_cnt, ARGS_VAR* args_var)
+static void print_commandline(int argc, const char **argv)
 {
-    if(au_cnt == 0) {
-        if(args_var->output_csp != OUTPUT_CSP_NATIVE && args_var->hash != 0) {
-            logv2("[Warning] cannot check frame hash value if special output CSP is defined\n")
+    int i;
+    if(op_verbose < VERBOSE_FRAME)
+        return;
+
+    logv3("Command line: ");
+    for(i = 0; i < argc; i++) {
+        logv3("%s ", argv[i]);
+    }
+    logv3("\n\n");
+}
+
+static void print_stat_au(oapvd_stat_t *stat, int au_cnt, args_var_t *args_var, oapv_clk_t clk_au, oapv_clk_t clk_tot)
+{
+    if(op_verbose >= VERBOSE_FRAME) {
+        if(au_cnt == 0) {
+            if(args_var->output_csp != OUTPUT_CSP_NATIVE && args_var->hash != 0) {
+                logv2("[Warning] cannot check frame hash value if special output CSP is defined\n")
+            }
         }
+        logv3_line("");
+        logv3("AU %-5d  %10d-bytes  %3d-frame(s) %10d msec\n", au_cnt, stat->read, stat->aui.num_frms, oapv_clk_msec(clk_au));
     }
-    logv2_line("");
-    logv2("AU %-5d  %10d-bytes  %3d-frame(s)\n", au_cnt, stat->read, stat->aui.num_frms);
+    else {
+        int total_time = ((int)oapv_clk_msec(clk_tot) / 1000);
+        int h = total_time / 3600;
+        total_time = total_time % 3600;
+        int m = total_time / 60;
+        total_time = total_time % 60;
+        int s = total_time;
+        logv2("[ %d AU(s) ] [ %.2f AU/sec ] [ %2dh %2dm %2ds ] \r",
+              au_cnt, ((float)(au_cnt + 1) * 1000) / ((float)oapv_clk_msec(clk_tot)), h, m, s);
+        fflush(stdout);
+    }
 }
 
-static void print_stat_frm(oapvd_stat_t* stat, oapv_frms_t* frms, oapvm_t mid, ARGS_VAR* args_var)
+static void print_stat_frm(oapvd_stat_t *stat, oapv_frms_t *frms, oapvm_t mid, args_var_t *args_var)
 {
-    int   i, ret, hash_idx;
-    oapv_frm_info_t* finfo;
+    oapv_frm_info_t *finfo;
+    int              i, ret, hash_idx;
+
+    if(op_verbose < VERBOSE_FRAME)
+        return;
 
     assert(stat->aui.num_frms == frms->num_frms);
 
@@ -280,11 +307,11 @@ static void print_stat_frm(oapvd_stat_t* stat, oapv_frms_t* frms, oapvm_t mid, A
 
     for(i = 0; i < stat->aui.num_frms; i++) {
         // clang-format off
-        const char* str_frm_type = finfo[i].pbu_type == OAPV_PBU_TYPE_PRIMARY_FRAME       ? "PRIMARY"
+        const char* str_frm_type = finfo[i].pbu_type == OAPV_PBU_TYPE_PRIMARY_FRAME ? "PRIMARY"
                                  : finfo[i].pbu_type == OAPV_PBU_TYPE_NON_PRIMARY_FRAME ? "NON-PRIMARY"
-                                 : finfo[i].pbu_type == OAPV_PBU_TYPE_PREVIEW_FRAME     ? "PREVIEW"
-                                 : finfo[i].pbu_type == OAPV_PBU_TYPE_DEPTH_FRAME       ? "DEPTH"
-                                 : finfo[i].pbu_type == OAPV_PBU_TYPE_ALPHA_FRAME       ? "ALPHA"
+                                 : finfo[i].pbu_type == OAPV_PBU_TYPE_PREVIEW_FRAME ? "PREVIEW"
+                                 : finfo[i].pbu_type == OAPV_PBU_TYPE_DEPTH_FRAME ? "DEPTH"
+                                 : finfo[i].pbu_type == OAPV_PBU_TYPE_ALPHA_FRAME ? "ALPHA"
                                  : "UNKNOWN";
 
         const char * str_csp = finfo[i].cs == OAPV_CS_YCBCR400_10LE ? "4:0:0-10"
@@ -296,10 +323,10 @@ static void print_stat_frm(oapvd_stat_t* stat, oapv_frms_t* frms, oapvm_t mid, A
         // clang-format on
 
         logv2("- FRM %-2d GID %-5d %-11s %9d-bytes %5dx%4d %-10s",
-            i, finfo[i].group_id, str_frm_type, stat->frm_size[i], finfo[i].w, finfo[i].h, str_csp);
+              i, finfo[i].group_id, str_frm_type, stat->frm_size[i], finfo[i].w, finfo[i].h, str_csp);
 
         if(args_var->hash) {
-            char* str_hash[4] = {"unsupport", "mismatch", "unavail", "match"};
+            char *str_hash[4] = { "unsupport", "mismatch", "unavail", "match" };
 
             if(args_var->output_csp != OUTPUT_CSP_NATIVE) {
                 hash_idx = 0;
@@ -307,11 +334,11 @@ static void print_stat_frm(oapvd_stat_t* stat, oapv_frms_t* frms, oapvm_t mid, A
             else {
                 ret = check_frm_hash(mid, frms->frm[i].imgb, frms->frm[i].group_id);
                 if(ret < 0)
-                    hash_idx = 1;  // mismatch
+                    hash_idx = 1; // mismatch
                 else if(ret > 0)
-                    hash_idx = 2;  // unavailable
+                    hash_idx = 2; // unavailable
                 else
-                    hash_idx = 3;  // matched
+                    hash_idx = 3; // matched
             }
             logv2("hash:%s", str_hash[hash_idx]);
         }
@@ -319,29 +346,33 @@ static void print_stat_frm(oapvd_stat_t* stat, oapv_frms_t* frms, oapvm_t mid, A
     }
 }
 
-int main(int argc, const char** argv)
+int main(int argc, const char **argv)
 {
-    ARGS_PARSER*     args;
-    ARGS_VAR*        args_var = NULL;
-    unsigned char*   bs_buf = NULL;
-    oapvd_t          did    = NULL;
-    oapvm_t          mid    = NULL;
+    args_parser_t   *args;
+    args_var_t      *args_var = NULL;
+    unsigned char   *bs_buf = NULL;
+    oapvd_t          did = NULL;
+    oapvm_t          mid = NULL;
     oapvd_cdesc_t    cdesc;
     oapv_bitb_t      bitb;
     oapv_frms_t      ofrms;
-    oapv_imgb_t*     imgb_w = NULL;
-    oapv_imgb_t*     imgb_o = NULL;
-    oapv_frm_t*      frm    = NULL;
+    oapv_imgb_t     *imgb_w = NULL;
+    oapv_imgb_t     *imgb_o = NULL;
+    oapv_frm_t      *frm = NULL;
     oapv_au_info_t   aui;
     oapvd_stat_t     stat;
     int              i, ret = 0;
-    oapv_clk_t       clk_beg, clk_tot;
+    oapv_clk_t       clk_beg, clk_end, clk_tot;
     int              au_cnt, frm_cnt[OAPV_MAX_NUM_FRAMES];
     int              read_size, bs_buf_size = 0;
-    FILE*            fp_bs  = NULL;
+    FILE            *fp_bs = NULL;
     int              is_y4m = 0;
-    char*            errstr = NULL;
-    oapv_frm_info_t* finfo  = NULL;
+    char            *errstr = NULL;
+    oapv_frm_info_t *finfo = NULL;
+
+    memset(frm_cnt, 0, sizeof(int) * OAPV_MAX_NUM_FRAMES);
+    memset(&aui, 0, sizeof(oapv_au_info_t));
+    memset(&ofrms, 0, sizeof(oapv_frms_t));
 
     /* help message */
     if(argc < 2 || !strcmp(argv[1], "--help") || !strcmp(argv[1], "-h")) {
@@ -366,6 +397,7 @@ int main(int argc, const char** argv)
         ret = -1;
         goto ERR;
     }
+    // print logo
     logv2("  ____                ___   ___ _   __\n");
     logv2(" / __ \\___  ___ ___  / _ | / _ \\ | / / Decoder\n");
     logv2("/ /_/ / _ \\/ -_) _ \\/ __ |/ ___/ |/ / \n");
@@ -373,6 +405,14 @@ int main(int argc, const char** argv)
     logv2("    /_/                               \n");
     logv2("\n");
 
+    // print command line string for information
+    print_commandline(argc, argv);
+
+    if(args->check_mandatory(args, &errstr)) {
+        logerr("'--%s' argument is mandatory\n", errstr);
+        ret = -1;
+        goto ERR;
+    }
 
     /* open input file */
     fp_bs = fopen(args_var->fname_inp, "rb");
@@ -384,7 +424,7 @@ int main(int argc, const char** argv)
     /* open output file */
     if(strlen(args_var->fname_out) > 0) {
         char  fext[16];
-        char* fname = (char*)args_var->fname_out;
+        char *fname = (char *)args_var->fname_out;
 
         if(strlen(fname) < 5) { /* at least x.yuv or x.y4m */
             logerr("ERROR: invalide output file name\n");
@@ -418,7 +458,7 @@ int main(int argc, const char** argv)
     }
     // create decoder
     cdesc.threads = args_var->threads;
-    did           = oapvd_create(&cdesc, &ret);
+    did = oapvd_create(&cdesc, &ret);
     if(did == NULL) {
         logerr("ERROR: cannot create OAPV decoder (err=%d)\n", ret);
         ret = -1;
@@ -431,10 +471,7 @@ int main(int argc, const char** argv)
     }
 
     clk_tot = 0;
-    au_cnt  = 0;
-    memset(frm_cnt, 0, sizeof(int) * OAPV_MAX_NUM_FRAMES);
-    memset(&aui, 0, sizeof(oapv_au_info_t));
-    memset(&ofrms, 0, sizeof(oapv_frms_t));
+    au_cnt = 0;
 
     /* create metadata container */
     mid = oapvm_create(&ret);
@@ -445,7 +482,7 @@ int main(int argc, const char** argv)
     }
 
     /* decoding loop */
-    while(1) {
+    while(args_var->max_au == 0 || (au_cnt < args_var->max_au)) {
         read_size = read_bitstream(fp_bs, bs_buf, &bs_buf_size);
         if(read_size <= 0) {
             logv3("--> end of bitstream or reading error\n");
@@ -461,8 +498,8 @@ int main(int argc, const char** argv)
         /* create decoding frame buffers */
         ofrms.num_frms = aui.num_frms;
         for(i = 0; i < ofrms.num_frms; i++) {
-            finfo = &aui.frm_info[FRM_IDX];
-            frm   = &ofrms.frm[i];
+            finfo = &aui.frm_info[i];
+            frm = &ofrms.frm[i];
 
             if(frm->imgb != NULL && (frm->imgb->w[0] != finfo->w || frm->imgb->h[0] != finfo->h)) {
                 frm->imgb->release(frm->imgb);
@@ -490,15 +527,16 @@ int main(int argc, const char** argv)
         }
 
         /* main decoding block */
-        bitb.addr  = bs_buf;
+        bitb.addr = bs_buf;
         bitb.ssize = bs_buf_size;
         memset(&stat, 0, sizeof(oapvd_stat_t));
 
         clk_beg = oapv_clk_get();
 
-        ret     = oapvd_decode(did, &bitb, &ofrms, mid, &stat);
+        ret = oapvd_decode(did, &bitb, &ofrms, mid, &stat);
 
-        clk_tot += oapv_clk_from(clk_beg);
+        clk_end = oapv_clk_from(clk_beg);
+        clk_tot += clk_end;
 
         if(OAPV_FAILED(ret)) {
             logerr("failed to decode bitstream\n");
@@ -512,10 +550,11 @@ int main(int argc, const char** argv)
 
         /* testing of metadata reading */
         if(mid) {
-            int              num_plds = 0;
-            oapvm_payload_t* pld      = NULL;
+            oapvm_payload_t *pld = NULL;   // metadata payload
+            int              num_plds = 0; // number of metadata payload
 
             ret = oapvm_get_all(mid, NULL, &num_plds);
+
             if(OAPV_FAILED(ret)) {
                 logerr("failed to read metadata\n");
                 goto END;
@@ -523,13 +562,18 @@ int main(int argc, const char** argv)
             if(num_plds > 0) {
                 pld = malloc(sizeof(oapvm_payload_t) * num_plds);
                 ret = oapvm_get_all(mid, pld, &num_plds);
+                if(OAPV_FAILED(ret)) {
+                    logerr("failed to read metadata\n");
+                    free(pld);
+                    goto END;
+                }
             }
             if(pld != NULL)
                 free(pld);
         }
 
         /* print decoding results */
-        print_stat_au(&stat, au_cnt, args_var);
+        print_stat_au(&stat, au_cnt, args_var, clk_end, clk_tot);
         print_stat_frm(&stat, &ofrms, mid, args_var);
 
         /* write decoded frames into files */
@@ -568,14 +612,14 @@ int main(int argc, const char** argv)
             }
         }
         au_cnt++;
-        oapvm_rem_all(mid);  // remove all metadata for next au decoding
+        oapvm_rem_all(mid); // remove all metadata for next au decoding
         fflush(stdout);
         fflush(stderr);
     }
 
 END:
     logv2_line("Summary");
-    logv2("Processed AUs                     = %d\n", au_cnt);
+    logv2("Processed access units            = %d\n", au_cnt);
     int total_frame_count = 0;
     for(i = 0; i < OAPV_MAX_NUM_FRAMES; i++)
         total_frame_count += frm_cnt[i];
@@ -591,8 +635,10 @@ END:
 ERR:
     if(did)
         oapvd_delete(did);
+
     if(mid)
         oapvm_delete(mid);
+
     for(int i = 0; i < ofrms.num_frms; i++) {
         if(ofrms.frm[i].imgb != NULL) {
             ofrms.frm[i].imgb->release(ofrms.frm[i].imgb);

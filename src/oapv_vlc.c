@@ -308,7 +308,7 @@ void oapve_set_frame_header(oapve_ctx_t * ctx, oapv_fh_t * fh)
     fh->fi.frame_width  = ctx->param->w;
     fh->fi.frame_height = ctx->param->h;
     fh->fi.chroma_format_idc = ctx->cfi;
-    fh->fi.bit_depth = OAPV_CS_GET_BIT_DEPTH(ctx->imgb->cs);
+    fh->fi.bit_depth = ctx->bit_depth;
     fh->tile_width_in_mbs  = ctx->param->tile_w_mb;
     fh->tile_height_in_mbs = ctx->param->tile_h_mb;
     if(fh->color_description_present_flag == 0)
@@ -339,6 +339,7 @@ void oapve_set_frame_header(oapve_ctx_t * ctx, oapv_fh_t * fh)
             fh->q_matrix[Y_C][i >> OAPV_LOG2_BLK][i & mod] = ctx->param->q_matrix_y[i];
             fh->q_matrix[U_C][i >> OAPV_LOG2_BLK][i & mod] = ctx->param->q_matrix_u[i];
             fh->q_matrix[V_C][i >> OAPV_LOG2_BLK][i & mod] = ctx->param->q_matrix_v[i];
+            fh->q_matrix[X_C][i >> OAPV_LOG2_BLK][i & mod] = ctx->param->q_matrix_x[i];
         }
     }
     fh->tile_size_present_in_fh_flag = 0;
@@ -353,6 +354,7 @@ static int enc_vlc_quantization_matrix(oapv_bs_t* bs, oapve_ctx_t* ctx, oapv_fh_
             for (int x = 0; x < 8; x++)
             {
                 oapv_bsw_write(bs, fh->q_matrix[cidx][y][x] - 1, 8);
+                DUMP_HLS(fh->q_matrix, fh->q_matrix[cidx][y][x]);
             }
         }
     }
@@ -362,13 +364,17 @@ static int enc_vlc_quantization_matrix(oapv_bs_t* bs, oapve_ctx_t* ctx, oapv_fh_
 static int enc_vlc_tile_info(oapv_bs_t* bs, oapve_ctx_t* ctx, oapv_fh_t* fh)
 {
     oapv_bsw_write(bs, fh->tile_width_in_mbs - 1,       28);
+    DUMP_HLS(fh->tile_width_in_mbs, fh->tile_width_in_mbs);
     oapv_bsw_write(bs, fh->tile_height_in_mbs - 1,      28);
+    DUMP_HLS(fh->tile_height_in_mbs, fh->tile_height_in_mbs);
     oapv_bsw_write(bs, fh->tile_size_present_in_fh_flag, 1);
+    DUMP_HLS(fh->tile_size_present_in_fh_flag, fh->tile_size_present_in_fh_flag);
     if (fh->tile_size_present_in_fh_flag)
     {
         for (int i = 0; i < ctx->num_tiles; i++)
         {
             oapv_bsw_write(bs, fh->tile_size[i] - 1,    32);
+            DUMP_HLS(fh->tile_size, fh->tile_size[i]);
         }
     }
 
@@ -378,15 +384,25 @@ static int enc_vlc_tile_info(oapv_bs_t* bs, oapve_ctx_t* ctx, oapv_fh_t* fh)
 int oapve_vlc_frame_info(oapv_bs_t* bs, oapv_fi_t* fi)
 {
     oapv_bsw_write(bs, fi->profile_idc, 8);
+    DUMP_HLS(fi->profile_idc, fi->profile_idc);
     oapv_bsw_write(bs, fi->level_idc, 8);
+    DUMP_HLS(fi->level_idc, fi->level_idc);
     oapv_bsw_write(bs, fi->band_idc, 3);
+    DUMP_HLS(fi->band_idc, fi->band_idc);
     oapv_bsw_write(bs, 0, 5); // reserved_zero_5bits
+    DUMP_HLS(reserved_zero, 0);
     oapv_bsw_write(bs, fi->frame_width - 1, 32);
+    DUMP_HLS(fi->frame_width, fi->frame_width - 1);
     oapv_bsw_write(bs, fi->frame_height - 1, 32);
+    DUMP_HLS(fi->frame_height, fi->frame_height - 1);
     oapv_bsw_write(bs, fi->chroma_format_idc, 4);
+    DUMP_HLS(fi->chroma_format_idc, fi->chroma_format_idc);
     oapv_bsw_write(bs, fi->bit_depth - 8, 4);
+    DUMP_HLS(fi->bit_depth, fi->bit_depth - 8);
     oapv_bsw_write(bs, fi->capture_time_distance, 8);
+    DUMP_HLS(fi->capture_time_distance, fi->capture_time_distance);
     oapv_bsw_write(bs, 0, 8); // reserved_zero_8bits
+    DUMP_HLS(reserved_zero, 0);
     return OAPV_OK;
 }
 
@@ -396,14 +412,20 @@ int oapve_vlc_frame_header(oapv_bs_t* bs, oapve_ctx_t* ctx, oapv_fh_t* fh)
 
     oapve_vlc_frame_info(bs, &fh->fi);
     oapv_bsw_write(bs, 0, 8); // reserved_zero_8bits
+    DUMP_HLS(reserved_zero, 0);
     oapv_bsw_write(bs, fh->color_description_present_flag,   1);
+    DUMP_HLS(fh->color_description_present_flag, fh->color_description_present_flag);
     if(fh->color_description_present_flag)
     {
         oapv_bsw_write(bs, fh->color_primaries,              8);
+        DUMP_HLS(fh->color_primaries, fh->color_primaries);
         oapv_bsw_write(bs, fh->transfer_characteristics,     8);
+        DUMP_HLS(fh->transfer_characteristics, fh->transfer_characteristics);
         oapv_bsw_write(bs, fh->matrix_coefficients,          8);
+        DUMP_HLS(fh->matrix_coefficients, fh->matrix_coefficients);
     }
     oapv_bsw_write(bs, fh->use_q_matrix,                     1);
+    DUMP_HLS(fh->use_q_matrix, fh->use_q_matrix);
     if (fh->use_q_matrix)
     {
       enc_vlc_quantization_matrix(bs, ctx, fh);
@@ -411,15 +433,16 @@ int oapve_vlc_frame_header(oapv_bs_t* bs, oapve_ctx_t* ctx, oapv_fh_t* fh)
     enc_vlc_tile_info(bs, ctx, fh);
 
     oapv_bsw_write(bs, 0, 8); // reserved_zero_8bits
+    DUMP_HLS(reserved_zero, 0);
     return OAPV_OK;
 }
 
 
 int oapve_vlc_tile_size(oapv_bs_t* bs, int tile_size)
 {
-    OAPV_TRACE_SET(1);
     oapv_assert_rv(bsw_is_align8(bs), OAPV_ERR_MALFORMED_BITSTREAM);
     oapv_bsw_write(bs, tile_size - 1, 32);
+    DUMP_HLS(tile_size, tile_size);
     return OAPV_OK;
 }
 
@@ -443,24 +466,27 @@ void oapve_set_tile_header(oapve_ctx_t* ctx, oapv_th_t* th, int tile_idx, int qp
 
 int oapve_vlc_tile_header(oapve_ctx_t* ctx, oapv_bs_t* bs, oapv_th_t* th)
 {
-    u8* bs_cur;
     oapv_assert_rv(bsw_is_align8(bs), OAPV_ERR_MALFORMED_BITSTREAM);
-    bs_cur = oapv_bsw_sink(bs); // write bits to bitstream buffer
-    oapv_bsw_write(bs, 0, 16); // header_size will be written properly, later
+    th->tile_header_size = 5; // tile_header_size + tile_index + reserved_zero_8bits
+    th->tile_header_size += (ctx->num_comp * 5); // tile_data_size + tile_qp
+
+    oapv_bsw_write(bs, th->tile_header_size, 16);
+    DUMP_HLS(th->tile_header_size, th->tile_header_size);
     oapv_bsw_write(bs, th->tile_index, 16);
+    DUMP_HLS(th->tile_index, th->tile_index);
     for (int c = 0; c < ctx->num_comp; c++)
     {
         oapv_bsw_write(bs, th->tile_data_size[c] - 1, 32);
+        DUMP_HLS(th->tile_data_size, th->tile_data_size[c]);
     }
     for (int c = 0; c < ctx->num_comp; c++)
     {
         oapv_bsw_write(bs, th->tile_qp[c], 8);
+        DUMP_HLS(th->tile_qp, th->tile_qp[c]);
     }
     oapv_bsw_write(bs, th->reserved_zero_8bits, 8);
-    // with byte align
-    th->tile_header_size = (int)((u8*)oapv_bsw_sink(bs) - bs_cur);
+    DUMP_HLS(th->reserved_zero_8bits, th->reserved_zero_8bits);
 
-    oapv_bsw_write_direct(bs_cur, th->tile_header_size, 16);
     return OAPV_OK;
 }
 
@@ -478,7 +504,6 @@ void oapve_vlc_run_length_cc(oapve_ctx_t* ctx, oapve_core_t * core, oapv_bs_t *b
     prev_level = core->prev_1st_ac_ctx[ch_type];
 
     int prev_run = 0;
-    OAPV_TRACE_SET(0);
 
     int rice_level = 0;
     scan_pos = 0;
@@ -559,16 +584,21 @@ void oapve_vlc_run_length_cc(oapve_ctx_t* ctx, oapve_core_t * core, oapv_bs_t *b
 int oapve_vlc_au_info(oapv_bs_t* bs, oapve_ctx_t* ctx, oapv_frms_t* frms, oapv_bs_t** bs_fi_pos)
 {
     oapv_bsw_write(bs, frms->num_frms, 16);
+    DUMP_HLS(num_frames, frms->num_frms);
     for(int fidx = 0; fidx < frms->num_frms; fidx++)
     {
         oapv_bsw_write(bs, frms->frm[fidx].pbu_type, 8);
+        DUMP_HLS(pbu_type, frms->frm[fidx].pbu_type);
         oapv_bsw_write(bs, frms->frm[fidx].group_id, 16);
+        DUMP_HLS(group_id, frms->frm[fidx].group_id);
         oapv_bsw_write(bs, 0, 8);
+        DUMP_HLS(reserved_zero_8bits, 0);
         memcpy(*(bs_fi_pos + sizeof(oapv_bs_t) * fidx), bs, sizeof(oapv_bs_t));/* store fi pos in au to re-write */
         oapve_vlc_frame_info(bs, &ctx->fh.fi);
     }
 
     oapv_bsw_write(bs, 0, 8);
+    DUMP_HLS(reserved_zero_8bits, 0);
     while (!bsw_is_align8(bs))
     {
         oapv_bsw_write1(bs, 0);
@@ -578,118 +608,29 @@ int oapve_vlc_au_info(oapv_bs_t* bs, oapve_ctx_t* ctx, oapv_frms_t* frms, oapv_b
 
 int oapve_vlc_pbu_size(oapv_bs_t* bs, int pbu_size)
 {
-    OAPV_TRACE_SET(1);
     oapv_assert_rv(bsw_is_align8(bs), OAPV_ERR_MALFORMED_BITSTREAM);
     oapv_bsw_write(bs, pbu_size, 32);
+    DUMP_HLS(pbu_size, pbu_size);
     return OAPV_OK;
 }
 
 int oapve_vlc_pbu_header(oapv_bs_t* bs, int pbu_type, int group_id)
 {
     oapv_bsw_write(bs, pbu_type, 8);
+    DUMP_HLS(pbu_type, pbu_type);
     oapv_bsw_write(bs, group_id, 16);
+    DUMP_HLS(group_id, group_id);
     oapv_bsw_write(bs, 0, 8); // reserved_zero_8bit
+    DUMP_HLS(reserved_zero, 0);
 
     return OAPV_OK;
 }
 
 /****** ENABLE_DECODER ******/
-int oapvd_vlc_run_length_cc(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, s16* coef, int log2_w, int log2_h, int ch_type)
-{
-    int            sign, level, prev_level, run;
-    int            scan_pos_offset, num_coeff, i, coef_cnt = 0;
-    const u16* scanp;
-
-    scanp = oapv_tbl_scan;
-    num_coeff = 1 << (log2_w + log2_h);
-    scan_pos_offset = 0;
-    int first_ac = 1;
-    prev_level = core->prev_1st_ac_ctx[ch_type];
-
-    int prev_run = 0;
-
-    do
-    {
-        int rice_run = 0;
-        rice_run = prev_run / 4;
-        if (rice_run > 2) rice_run = 2;
-        run = dec_vlc_read(bs, rice_run);
-
-        for (i = scan_pos_offset; i < scan_pos_offset + run; i++)
-        {
-            coef[scanp[i]] = 0;
-        }
-
-        if (scan_pos_offset + run == num_coeff)
-        {
-            break;
-        }
-
-        scan_pos_offset += run;
-
-        /* Level parsing */
-        int rice_level = 0;
-        if (scan_pos_offset == 0)
-        {
-            rice_level = oapv_clip3(OAPV_MIN_DC_LEVEL_CTX, OAPV_MAX_DC_LEVEL_CTX, core->prev_dc_ctx[ch_type] >> 1);
-        }
-        else
-        {
-            rice_level = oapv_clip3(OAPV_MIN_AC_LEVEL_CTX, OAPV_MAX_AC_LEVEL_CTX, prev_level >> 2);
-        }
-        level = dec_vlc_read(bs, rice_level);
-        level++;
-
-        OAPV_TRACE_STR("level ");
-        OAPV_TRACE_INT(level);
-        OAPV_TRACE_STR("\n");
-
-        if (scan_pos_offset != 0)
-        {
-            prev_level = level;
-        }
-        prev_run = run;
-
-        if (scan_pos_offset == 0)
-        {
-            core->prev_dc_ctx[ch_type] = level;
-        }
-        else if (first_ac)
-        {
-            first_ac = 0;
-            core->prev_1st_ac_ctx[ch_type] = level;
-        }
-
-        /* Sign parsing */
-        sign = oapv_bsr_read1(bs);
-        coef[scanp[scan_pos_offset]] = sign ? -(s16)level : (s16)level;
-
-        coef_cnt++;
-
-        if (scan_pos_offset >= num_coeff - 1)
-        {
-            break;
-        }
-        scan_pos_offset++;
-
-    } while (1);
-
-#if ENC_DEC_TRACE
-    OAPV_TRACE_STR("coef ");
-    OAPV_TRACE_INT(ch_type);
-    OAPV_TRACE_STR(": ");
-    for (scan_pos_offset = 0; scan_pos_offset < num_coeff; scan_pos_offset++)
-    {
-        OAPV_TRACE_INT(coef[scanp[scan_pos_offset]]);
-    }
-    OAPV_TRACE_STR("\n");
-#endif
-    return OAPV_OK;
-}
-
 int oapve_vlc_metadata(oapv_md_t* md, oapv_bs_t* bs)
 {
     oapv_bsw_write(bs, md->md_size, 32);
+    DUMP_HLS(metadata_size, md->md_size);
     oapv_mdp_t* mdp = md->md_payload;
 
     while (mdp != NULL)
@@ -698,21 +639,26 @@ int oapve_vlc_metadata(oapv_md_t* md, oapv_bs_t* bs)
         while (mdp_pltype >= 255)
         {
             oapv_bsw_write(bs, 0xFF, 8);
+            DUMP_HLS(payload_type, 0xFF);
             mdp_pltype -= 255;
         }
         oapv_bsw_write(bs, mdp_pltype, 8);
+        DUMP_HLS(payload_type, mdp_pltype);
 
         u32 mdp_size = mdp->pld_size;
         while (mdp_size >= 255)
         {
             oapv_bsw_write(bs, 0xFF, 8);
+            DUMP_HLS(payload_size, 0xFF);
             mdp_size -= 255;
         }
         oapv_bsw_write(bs, mdp_size, 8);
+        DUMP_HLS(payload_size, mdp_size);
 
         for (u32 i=0; i < mdp->pld_size; i++) {
             u8* payload_data = (u8*)mdp->pld_data;
             oapv_bsw_write(bs, payload_data[i], 8);
+            DUMP_HLS(payload_data, payload_data[i]);
         }
 
         mdp = mdp->next;
@@ -732,34 +678,38 @@ int oapve_vlc_metadata(oapv_md_t* md, oapv_bs_t* bs)
 ///////////////////////////////////////////////////////////////////////////////
 int oapvd_vlc_au_size(oapv_bs_t* bs)
 {
-    int size;
-    size = oapv_bsr_read(bs, 32);
-    oapv_assert_rv(size > 0, OAPV_ERR_MALFORMED_BITSTREAM);
-    return size;
+    int au_size;
+    au_size = oapv_bsr_read(bs, 32);
+    oapv_assert_rv(au_size > 0, OAPV_ERR_MALFORMED_BITSTREAM);
+    return au_size;
 }
 
 
 int oapvd_vlc_pbu_size(oapv_bs_t* bs)
 {
-    int size;
-    size = oapv_bsr_read(bs, 32);
-    oapv_assert_rv(size > 0 && size < 0xFFFFFFFF, -1);
-    return size;
+    int pbu_size;
+    pbu_size = oapv_bsr_read(bs, 32);
+    DUMP_HLS(pbu_size, pbu_size);
+    oapv_assert_rv(pbu_size > 0 && pbu_size < 0xFFFFFFFF, -1);
+    return pbu_size;
 }
 
 int  oapvd_vlc_pbu_header(oapv_bs_t* bs, oapv_pbuh_t* pbuh)
 {
     int reserved_zero;
     pbuh->pbu_type = oapv_bsr_read(bs, 8);
+    DUMP_HLS(pbu_type, pbuh->pbu_type);
     oapv_assert_rv(pbuh->pbu_type != 0, OAPV_ERR_MALFORMED_BITSTREAM);
     oapv_assert_rv(!(pbuh->pbu_type >= 3 && pbuh->pbu_type <= 24), OAPV_ERR_MALFORMED_BITSTREAM);
     oapv_assert_rv(!(pbuh->pbu_type >= 28 && pbuh->pbu_type <= 64), OAPV_ERR_MALFORMED_BITSTREAM);
     oapv_assert_rv(!(pbuh->pbu_type >= 68), OAPV_ERR_MALFORMED_BITSTREAM);
 
     pbuh->group_id = oapv_bsr_read(bs, 16);
+    DUMP_HLS(group_id, pbuh->group_id);
     oapv_assert_rv(pbuh->group_id >= 0 && pbuh->group_id < 0xFFFF, OAPV_ERR_MALFORMED_BITSTREAM);
 
     reserved_zero = oapv_bsr_read(bs, 8);
+    DUMP_HLS(reserved_zero, reserved_zero);
     oapv_assert_rv(reserved_zero==0, OAPV_ERR_MALFORMED_BITSTREAM);
     return OAPV_OK;
 }
@@ -768,16 +718,26 @@ int oapvd_vlc_frame_info(oapv_bs_t* bs, oapv_fi_t *fi)
 {
     int reserved_zero;
     fi->profile_idc = oapv_bsr_read(bs, 8);
+    DUMP_HLS(fi->profile_idc, fi->profile_idc);
     fi->level_idc = oapv_bsr_read(bs, 8);
+    DUMP_HLS(fi->level_idc, fi->level_idc);
     fi->band_idc = oapv_bsr_read(bs, 3);
+    DUMP_HLS(fi->band_idc, fi->band_idc);
     reserved_zero = oapv_bsr_read(bs, 5);
+    DUMP_HLS(reserved_zero, reserved_zero);
     oapv_assert_rv(reserved_zero==0, OAPV_ERR_MALFORMED_BITSTREAM);
     fi->frame_width = oapv_bsr_read(bs, 32);
+    DUMP_HLS(fi->frame_width, fi->frame_width);
     fi->frame_height = oapv_bsr_read(bs, 32);
+    DUMP_HLS(fi->frame_height, fi->frame_height);
     fi->chroma_format_idc = oapv_bsr_read(bs, 4);
+    DUMP_HLS(fi->chroma_format_idc, fi->chroma_format_idc);
     fi->bit_depth = oapv_bsr_read(bs, 4);
+    DUMP_HLS(fi->bit_depth, fi->bit_depth);
     fi->capture_time_distance = oapv_bsr_read(bs, 8);
+    DUMP_HLS(fi->capture_time_distance, fi->capture_time_distance);
     reserved_zero = oapv_bsr_read(bs, 8);
+    DUMP_HLS(reserved_zero, reserved_zero);
     oapv_assert_rv(reserved_zero==0, OAPV_ERR_MALFORMED_BITSTREAM);
 
     fi->frame_width += 1;
@@ -792,28 +752,25 @@ int oapvd_vlc_au_info(oapv_bs_t* bs, oapv_aui_t* aui)
     int reserved_zero_8bits;
 
     aui->num_frames = oapv_bsr_read(bs, 16);
+    DUMP_HLS(num_frames, aui->num_frames);
     for (int fidx = 0; fidx < aui->num_frames; fidx++)
     {
         aui->pbu_type[fidx] = oapv_bsr_read(bs, 8);
+        DUMP_HLS(pbu_type, aui->pbu_type[fidx]);
         aui->group_id[fidx] = oapv_bsr_read(bs, 16);
+        DUMP_HLS(group_id, aui->group_id[fidx]);
         reserved_zero_8bits = oapv_bsr_read(bs, 8);
+        DUMP_HLS(reserved_zero_8bits, reserved_zero_8bits);
         oapv_assert_rv(reserved_zero_8bits==0, OAPV_ERR_MALFORMED_BITSTREAM);
         ret = oapvd_vlc_frame_info(bs, &aui->frame_info[fidx]);
         oapv_assert_rv(OAPV_SUCCEEDED(ret), ret);
     }
     reserved_zero_8bits = oapv_bsr_read(bs, 8);
+    DUMP_HLS(reserved_zero_8bits, reserved_zero_8bits);
     oapv_assert_rv(reserved_zero_8bits==0, OAPV_ERR_MALFORMED_BITSTREAM);
     /* byte align */
     oapv_bsr_align8(bs);
     return OAPV_OK;
-}
-
-int oapvd_vlc_frame_size(oapv_bs_t* bs)
-{
-    int size;
-    oapv_assert_rv(bsr_get_remained_byte(bs) >= 4, -1);
-    size = oapv_bsr_read(bs, 32);
-    return size;
 }
 
 static int dec_vlc_q_matrix(oapv_bs_t* bs, oapv_fh_t* fh)
@@ -826,6 +783,7 @@ static int dec_vlc_q_matrix(oapv_bs_t* bs, oapv_fh_t* fh)
             for (int x = 0; x < OAPV_BLK_W; x++)
             {
                 fh->q_matrix[cidx][y][x] = oapv_bsr_read(bs, 8) + 1;
+                DUMP_HLS(fh->q_matrix, fh->q_matrix[cidx][y][x]);
             }
         }
     }
@@ -836,7 +794,9 @@ static int dec_vlc_tile_info(oapv_bs_t* bs, oapv_fh_t* fh)
 {
     int pic_w, pic_h, tile_w, tile_h, tile_cols, tile_rows;
     fh->tile_width_in_mbs = oapv_bsr_read(bs, 28) + 1;
+    DUMP_HLS(fh->tile_width_in_mbs, fh->tile_width_in_mbs);
     fh->tile_height_in_mbs = oapv_bsr_read(bs, 28) + 1;
+    DUMP_HLS(fh->tile_height_in_mbs, fh->tile_height_in_mbs);
 
     /* set various value */
     pic_w = ((fh->fi.frame_width + (OAPV_MB_W - 1)) >> OAPV_LOG2_MB_W) << OAPV_LOG2_MB_W;
@@ -847,11 +807,13 @@ static int dec_vlc_tile_info(oapv_bs_t* bs, oapv_fh_t* fh)
     tile_rows = (pic_h + (tile_h -1)) / tile_h;
 
     fh->tile_size_present_in_fh_flag = oapv_bsr_read1(bs);
+    DUMP_HLS(fh->tile_size_present_in_fh_flag, fh->tile_size_present_in_fh_flag);
     if (fh->tile_size_present_in_fh_flag)
     {
         for (int i = 0; i < tile_cols * tile_rows; i++)
         {
             fh->tile_size[i] = oapv_bsr_read(bs, 32) + 1;
+            DUMP_HLS(fh->tile_size, fh->tile_size[i]);
         }
     }
 
@@ -866,14 +828,19 @@ int oapvd_vlc_frame_header(oapv_bs_t* bs, oapv_fh_t* fh)
     oapv_assert_rv(OAPV_SUCCEEDED(ret), ret);
 
     reserved_zero = oapv_bsr_read(bs, 8);
+    DUMP_HLS(reserved_zero, reserved_zero);
     oapv_assert_rv(reserved_zero == 0, OAPV_ERR_MALFORMED_BITSTREAM);
 
     fh->color_description_present_flag = oapv_bsr_read(bs, 1);
+    DUMP_HLS(fh->color_description_present_flag, fh->color_description_present_flag);
     if(fh->color_description_present_flag)
     {
         fh->color_primaries = oapv_bsr_read(bs, 8);
+        DUMP_HLS(fh->color_primaries, fh->color_primaries);
         fh->transfer_characteristics = oapv_bsr_read(bs, 8);
+        DUMP_HLS(fh->transfer_characteristics, fh->transfer_characteristics);
         fh->matrix_coefficients = oapv_bsr_read(bs, 8);
+        DUMP_HLS(fh->matrix_coefficients, fh->matrix_coefficients);
     }
     else
     {
@@ -882,6 +849,7 @@ int oapvd_vlc_frame_header(oapv_bs_t* bs, oapv_fh_t* fh)
       fh->matrix_coefficients      = 2;
     }
     fh->use_q_matrix = oapv_bsr_read(bs, 1);
+    DUMP_HLS(fh->use_q_matrix, fh->use_q_matrix);
     if (fh->use_q_matrix)
     {
       ret = dec_vlc_q_matrix(bs, fh);
@@ -892,6 +860,7 @@ int oapvd_vlc_frame_header(oapv_bs_t* bs, oapv_fh_t* fh)
     oapv_assert_rv(OAPV_SUCCEEDED(ret), ret);
 
     reserved_zero = oapv_bsr_read(bs, 8);
+    DUMP_HLS(reserved_zero, reserved_zero);
     oapv_assert_rv(reserved_zero == 0, OAPV_ERR_MALFORMED_BITSTREAM);
 
     /* byte align */
@@ -917,22 +886,29 @@ int oapvd_vlc_frame_header(oapv_bs_t* bs, oapv_fh_t* fh)
 
 int oapvd_vlc_tile_size(oapv_bs_t* bs)
 {
-    return oapv_bsr_read(bs, 32) + 1;
+    int tile_size = oapv_bsr_read(bs, 32) + 1;
+    DUMP_HLS(tile_size, tile_size);
+    return tile_size;
 }
 
 int oapvd_vlc_tile_header(oapv_bs_t* bs, oapvd_ctx_t* ctx, oapv_th_t* th)
 {
     th->tile_header_size = oapv_bsr_read(bs, 16);
+    DUMP_HLS(th->tile_header_size, th->tile_header_size);
     th->tile_index = oapv_bsr_read(bs, 16);
+    DUMP_HLS(th->tile_index, th->tile_index);
     for (int c = 0; c < ctx->num_comp; c++)
     {
         th->tile_data_size[c] = oapv_bsr_read(bs, 32) + 1;
+        DUMP_HLS(th->tile_data_size, th->tile_data_size[c]);
     }
     for (int c = 0; c < ctx->num_comp; c++)
     {
         th->tile_qp[c] = oapv_bsr_read(bs, 8);
+        DUMP_HLS(th->tile_qp, th->tile_qp[c]);
     }
     th->reserved_zero_8bits = oapv_bsr_read(bs, 8);
+    DUMP_HLS(th->reserved_zero_8bits, th->reserved_zero_8bits);
     /* byte align */
     oapv_bsr_align8(bs);
 
@@ -945,23 +921,13 @@ int oapve_vlc_dc_coeff(oapve_ctx_t* ctx, oapve_core_t* core, oapv_bs_t* bs, int 
     int abs_dc_diff = oapv_abs32(dc_diff);
     int sign_dc_diff = (dc_diff > 0) ? 0 : 1;
 
-    OAPV_TRACE_SET(TRACE_COEF_BIN);
     rice_level = oapv_clip3(OAPV_MIN_DC_LEVEL_CTX, OAPV_MAX_DC_LEVEL_CTX, core->prev_dc_ctx[c] >> 1);
-
     enc_vlc_write(bs, abs_dc_diff, rice_level);
-
 
     if (abs_dc_diff)
         oapv_bsw_write1(bs, sign_dc_diff);
 
     core->prev_dc_ctx[c] = abs_dc_diff;
-
-    OAPV_TRACE_SET(TRACE_COEF_BIN);
-    OAPV_TRACE_COUNTER
-    OAPV_TRACE_STR("dc");
-    OAPV_TRACE_INT(dc_diff);
-    OAPV_TRACE_STR("\n");
-
     return OAPV_OK;
 }
 void oapve_vlc_ac_coeff(oapve_ctx_t* ctx, oapve_core_t* core, oapv_bs_t* bs, s16* coef, int num_sig, int ch_type)
@@ -982,15 +948,12 @@ void oapve_vlc_ac_coeff(oapve_ctx_t* ctx, oapve_core_t* core, oapv_bs_t* bs, s16
     int lb = bs->leftbits;
     u32 code = bs->code;
     u8* cur = bs->cur;
-    OAPV_TRACE_SET(TRACE_COEF_BIN);
-    OAPV_TRACE_COUNTER
-    OAPV_TRACE_STR("ac ");
+
     for (scan_pos = 1; scan_pos < num_coeff; scan_pos++)
     {
         coef_temp[scan_pos] = coef[scanp[scan_pos]];
-        OAPV_TRACE_INT(coef[scanp[scan_pos]]);
     }
-    OAPV_TRACE_STR("\n");
+
     const s32 simple_vlc_table[3][2] = { {1,  },
                                         {0, 0},
                                         {0, 1} };
@@ -1310,21 +1273,13 @@ int oapvd_vlc_dc_coeff(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, s16*
     int abs_dc_diff;
     int sign_dc_diff = 0;
 
-    OAPV_TRACE_SET(TRACE_COEF_BIN);
     rice_level = oapv_clip3(OAPV_MIN_DC_LEVEL_CTX, OAPV_MAX_DC_LEVEL_CTX, core->prev_dc_ctx[c] >> 1);
     abs_dc_diff = dec_vlc_read(bs, rice_level);
     if (abs_dc_diff)
         sign_dc_diff = oapv_bsr_read1(bs);
 
     *dc_diff = sign_dc_diff ? -abs_dc_diff : abs_dc_diff;
-
     core->prev_dc_ctx[c] = abs_dc_diff;
-
-    OAPV_TRACE_SET(TRACE_COEF_BIN);
-    OAPV_TRACE_COUNTER;
-    OAPV_TRACE_STR("dc");
-    OAPV_TRACE_INT(*dc_diff);
-    OAPV_TRACE_STR("\n");
 
     return OAPV_OK;
 }
@@ -1344,7 +1299,6 @@ int oapvd_vlc_ac_coeff(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, s16*
     prev_level = core->prev_1st_ac_ctx[c];
     int prev_run = 0;
 
-    OAPV_TRACE_SET(TRACE_COEF_BIN);
     do
     {
         int rice_run = 0;
@@ -1446,16 +1400,7 @@ int oapvd_vlc_ac_coeff(oapvd_ctx_t* ctx, oapvd_core_t* core, oapv_bs_t* bs, s16*
         scan_pos_offset++;
     } while (1);
 
-#if ENC_DEC_TRACE
-    OAPV_TRACE_SET(TRACE_COEF_BIN);
-    OAPV_TRACE_COUNTER;
-    OAPV_TRACE_STR("ac ");
-    for (scan_pos_offset = 1; scan_pos_offset < num_coeff; scan_pos_offset++)
-    {
-        OAPV_TRACE_INT(coef[scanp[scan_pos_offset]]);
-    }
-    OAPV_TRACE_STR("\n");
-#endif
+
     return OAPV_OK;
 }
 
@@ -1468,16 +1413,13 @@ int oapvd_vlc_tile_dummy_data(oapv_bs_t* bs)
     return OAPV_OK;
 }
 
-#define INIT_MDP(TYPE, VAL) \
-    TYPE* VAL = (TYPE*)oapv_malloc(sizeof(TYPE));\
-    oapv_mset(VAL, 0, sizeof(TYPE));
-
 int oapvd_vlc_metadata(oapv_bs_t* bs, u32 pbu_size, oapvm_t mid, int group_id)
 {
     int ret;
     u32 t0;
     u32 metadata_size;
     metadata_size = oapv_bsr_read(bs, 32);
+    DUMP_HLS(metadata_size, metadata_size);
     u8* bs_start_pos = bs->cur;
     u8* payload_data = NULL;
     while (metadata_size > 0)
@@ -1488,6 +1430,7 @@ int oapvd_vlc_metadata(oapv_bs_t* bs, u32 pbu_size, oapvm_t mid, int group_id)
         do
         {
             t0 = oapv_bsr_read(bs, 8);
+            DUMP_HLS(payload_type, t0);
             metadata_size -= 8;
             if (t0 == 0xFF)
             {
@@ -1500,6 +1443,7 @@ int oapvd_vlc_metadata(oapv_bs_t* bs, u32 pbu_size, oapvm_t mid, int group_id)
         do
         {
             t0 = oapv_bsr_read(bs, 8);
+            DUMP_HLS(payload_size, t0);
             metadata_size -= 8;
             if (t0 == 0xFF)
             {
@@ -1516,6 +1460,7 @@ int oapvd_vlc_metadata(oapv_bs_t* bs, u32 pbu_size, oapvm_t mid, int group_id)
             if (payload_type == OAPV_METADATA_FILLER) {
                 for(u32 i=0; i<payload_size; i++) {
                     t0 = oapv_bsr_read(bs, 8);
+                    DUMP_HLS(payload_data, t0);
                     oapv_assert_gv(t0 == 0xFF, ret, OAPV_ERR_MALFORMED_BITSTREAM, ERR);
                     payload_data[i] = 0xFF;
                 }
@@ -1523,6 +1468,7 @@ int oapvd_vlc_metadata(oapv_bs_t* bs, u32 pbu_size, oapvm_t mid, int group_id)
             else {
                 for(u32 i=0; i < payload_size; i++) {
                     t0 = oapv_bsr_read(bs, 8);
+                    DUMP_HLS(payload_data, t0);
                     payload_data[i] = t0;
                 }
             }

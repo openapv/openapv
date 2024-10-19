@@ -72,17 +72,8 @@ void oapv_bsw_init(oapv_bs_t * bs, u8 * buf, int size, oapv_bs_fn_flush_t fn_flu
 void oapv_bsw_deinit(oapv_bs_t * bs);
 void* oapv_bsw_sink(oapv_bs_t* bs);
 int oapv_bsw_write_direct(void * bits, u32 val, int len);
-
-#if TRACE_HLS
-#define oapv_bsw_write1(A, B) oapv_bsw_write1_trace(A, B, #B)
-int oapv_bsw_write1_trace(oapv_bs_t* bs, int val, char* name);
-
-#define oapv_bsw_write(A, B, C) oapv_bsw_write_trace(A, B, #B, C)
-int oapv_bsw_write_trace(oapv_bs_t* bs, u32 val, char* name, int len);
-#else
 int oapv_bsw_write1(oapv_bs_t * bs, int val);
 int oapv_bsw_write(oapv_bs_t * bs, u32 val, int len);
-#endif
 ///////////////////////////////////////////////////////////////////////////////
 // end of encoder code
 #endif // ENABLE_ENCODER
@@ -111,25 +102,15 @@ static int inline bsr_get_remained_byte(oapv_bs_t* bs)
 }
 
 void oapv_bsr_init(oapv_bs_t * bs, u8 * buf, int size, oapv_bs_fn_flush_t fn_flush);
-int oapv_bsr_flush(oapv_bs_t * bs, int byte);
 int oapv_bsr_clz_in_code(u32 code);
 void oapv_bsr_align8(oapv_bs_t* bs);
 void oapv_bsr_skip(oapv_bs_t* bs, int size);
 void oapv_bsr_peek(oapv_bs_t* bs, u32 * val, int size);
 void* oapv_bsr_sink(oapv_bs_t* bs);
 void oapv_bsr_move(oapv_bs_t* bs, u8* pos);
-
-#if TRACE_HLS
-#define oapv_bsr_read(A, B, C) oapv_bsr_read_trace(A, B, #B, C)
-void oapv_bsr_read_trace(oapv_bs_t * bs, u32 * val, char * name, int size);
-
-#define oapv_bsr_read1(A) oapv_bsr_read1_trace(A, " ")
-int oapv_bsr_read1_trace(oapv_bs_t * bs, char * name);
-
-#else
 u32 oapv_bsr_read(oapv_bs_t * bs, int size);
 int oapv_bsr_read1(oapv_bs_t * bs);
-#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 // end of decoder code
 #endif // ENABLE_DECODER

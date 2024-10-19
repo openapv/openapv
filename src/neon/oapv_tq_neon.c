@@ -654,7 +654,7 @@ const oapv_fn_itx_t oapv_tbl_fn_itx_neon[2] =
             NULL
 };
 
-static int oapv_quant_nnz_simple_neon(u8 qp, int q_matrix[OAPV_BLK_H * OAPV_BLK_W], s16* coef, int log2_w, int log2_h,
+static int oapv_quant_nnz_simple_neon(u8 qp, int q_matrix[OAPV_BLK_D], s16* coef, int log2_w, int log2_h,
     u16 scale, int ch_type, int bit_depth, int deadzone_offset)
 {
     int nnz = 0;
@@ -711,7 +711,7 @@ const oapv_fn_quant_t oapv_tbl_quantb_neon[2] =
         NULL
 };
 
-static void oapv_dquant_simple_neon(s16 *coef, int q_matrix[OAPV_BLK_H * OAPV_BLK_W], int log2_w, int log2_h, int scale, s8 shift)
+static void oapv_dquant_simple_neon(s16 *coef, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h, int scale, s8 shift)
 {
     int i;
     int pixels = (1 << (log2_w + log2_h));
@@ -771,7 +771,7 @@ static void oapv_dquant_simple_neon(s16 *coef, int q_matrix[OAPV_BLK_H * OAPV_BL
         }
     }
 }
-const oapv_fn_iquant_t oapv_tbl_fn_iquant_neon[2] =
+const oapv_fn_dquant_t oapv_tbl_fn_dquant_neon[2] =
 {
     oapv_dquant_simple_neon,
         NULL
