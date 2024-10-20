@@ -68,11 +68,12 @@ Encoder as input require raw YUV file (422, 444), 10-bit or more.
 
 Displaying help:
 
-    $oapv_app_enc --help
+    $> oapv_app_enc --help
 
 Encoding:
 
-    $oapv_app_enc -i input_1920x1080_yuv422_10bit.yuv -w 1920 -h 1080 -d 10 -z 30 -o encoded.apv
+    $> oapv_app_enc -i input_1920x1080_yuv422_10bit.yuv -w 1920 -h 1080 -d 10 -z 30 --input-csp 2 -o encoded.apv
+    $> oapv_app_enc -i input.y4m -o encoded.apv    
 
 ### Decoder
 
@@ -80,11 +81,11 @@ Decoder output can be in yuv or y4m formats.
 
 Displaying help:
 
-    $oapv_app_dec --help
+    $> oapv_app_dec --help
 
 Decoding:
 
-    $oapv_app_dec -i encoded.apv -o output.y4m
+    $> oapv_app_dec -i encoded.apv -o output.y4m
 
 ## Testing
 
