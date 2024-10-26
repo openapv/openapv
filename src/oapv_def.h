@@ -177,15 +177,17 @@ typedef struct oapve_core oapve_core_t;
 /*****************************************************************************
  * pre-defined function structure
  *****************************************************************************/
-typedef void (*oapv_fn_itx_t)(s16 *coef, s16 *t, int shift, int line);
+typedef void (*oapv_fn_itx_part_t)(s16 *coef, s16 *t, int shift, int line);
+typedef void (*oapv_fn_itx_t)(s16 *coef, int shift1, int shift2, int line);
 typedef void (*oapv_fn_tx_t)(s16 *coef, s16 *t, int shift, int line);
 typedef void (*oapv_fn_itx_adj_t)(int *src, int *dst, int itrans_diff_idx, int diff_step, int shift);
-typedef int (*oapv_fn_quant_t)(u8 qp, int q_matrix[OAPV_BLK_D], s16 *coef, int log2_w, int log2_h,
+typedef int (*oapv_fn_quant_t)(s16 *coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h,  int bit_depth, int deadzone_offset);
+// to-do: remove
+typedef int (*oapv_fn_quant_old_t)(s16 *coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h,
                                u16 scale, int ch_type, int bit_depth, int deadzone_offset);
-typedef int (*oapv_fn_quant_t_no_qp_matrix)(u8 qp, int q_matrix_val, s16 *coef,
-                                            int bit_depth, int deadzone_offset);
-typedef void (*oapv_fn_dquant_t)(s16 *coef, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h, int scale, s8 shift);
-typedef void (*oapv_fn_dquant_t_no_qp_matrix)(s16 *coef, int q_matrix, s8 shift);
+typedef void (*oapv_fn_dquant_t)(s16* coef, s16 q_matrix[OAPV_BLK_D], int log2_w, int log2_h, s8 shift);
+// to-do: remove
+typedef void (*oapv_fn_dquant_old_t)(s16 *coef, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h, int scale, s8 shift);
 typedef int (*oapv_fn_sad_t)(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int bit_depth);
 typedef s64 (*oapv_fn_ssd_t)(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int bit_depth);
 typedef void (*oapv_fn_diff_t)(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int s_diff, s16 *diff, int bit_depth);
@@ -234,32 +236,12 @@ struct oapve_core {
     int          prev_1st_ac_ctx[N_C];
     int          tile_idx;
     int          prev_dc[N_C];
-    int          prev_dc_rdo[N_C];
-    int          stored_prev_dc[N_C];
-    int          stored_prev_dc_ctx[N_C];
-    int          next_dc[N_C];
-    int          next_dc_ctx[N_C];
-    int          stored_prev_1st_ac_ctx[N_C];
-    int          nnz2[2][4];
 
     int          qp[N_C]; // QPs for Y, Cb(U), Cr(V)
-    int          dq_scale[N_C];
     int          dq_shift[N_C];
 
-    int          x_pel; // left position in unit of pixel
-    int          y_pel; // top position in unit of pixel
-
-    int          x_blk; // left position in unit of block
-    int          y_blk; // top position in unit of block
-
-    int          x_mb; // left position in unit of MB
-    int          y_mb; // top position in unit of MB
-    int          w_mb;
-
-    int          nnz[N_C]; // number of non-zero coefficient
-
-    int          q_matrix_enc[N_C][OAPV_BLK_D];
-    int          q_matrix_dec[N_C][OAPV_BLK_D];
+    int          q_mat_enc[N_C][OAPV_BLK_D];
+    s16          q_mat_dec[N_C][OAPV_BLK_D];
     int          thread_idx;
     /* platform specific data, if needed */
     void        *pf;
@@ -315,6 +297,7 @@ struct oapve_ctx {
     oapve_core_t            *core[OAPV_MAX_THREADS];
 
     oapv_bs_t                bs;
+    const oapv_fn_itx_part_t     *fn_itx_part;
     const oapv_fn_itx_t     *fn_itx;
     const oapv_fn_itx_adj_t *fn_itx_adj;
     const oapv_fn_tx_t      *fn_txb;
@@ -372,15 +355,12 @@ struct oapvd_core {
     ALIGNED_16(s16 coef[OAPV_MB_D]);
     oapvd_ctx_t *ctx;
 
-    int          x_pel; // left pel position of current coding block
-    int          y_pel; // top pel position of current coding block
     int          prev_dc_ctx[N_C];
     int          prev_1st_ac_ctx[N_C];
     int          prev_dc[N_C];
     int          qp[N_C];
-    int          dq_scale[N_C];
     int          dq_shift[N_C];
-    int          q_mat[N_C][OAPV_BLK_D];
+    s16          q_mat[N_C][OAPV_BLK_D];
 
     int          tile_idx;
 

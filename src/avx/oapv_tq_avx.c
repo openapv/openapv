@@ -43,7 +43,7 @@
     _mm256_set_m128i(_mm_loadu_si128(hiaddr), _mm_loadu_si128(loaddr))
 #endif // !_mm256_loadu2_m128i
 
-static void oapv_tx_pb8b_avx(s16 *src, s16 *dst, int shift, int line)
+static void oapv_tx_part_avx(s16 *src, s16 *dst, int shift, int line)
 {
     __m256i v0, v1, v2, v3, v4, v5, v6, v7;
     __m256i d0, d1, d2, d3;
@@ -96,9 +96,9 @@ static void oapv_tx_pb8b_avx(s16 *src, s16 *dst, int shift, int line)
     _mm_store_si128((__m128i *)(dst + 7 * line), _mm256_extracti128_si256(d1, 1));
 }
 
-const oapv_fn_tx_t oapv_tbl_txb_avx[2] =
+const oapv_fn_tx_t oapv_tbl_fn_txb_avx[2] =
 {
-    oapv_tx_pb8b_avx,
+    oapv_tx_part_avx,
         NULL
 };
 
@@ -160,7 +160,7 @@ const oapv_fn_tx_t oapv_tbl_txb_avx[2] =
 #define set_vals(a,b) b, a, b, a, b, a, b, a, b, a, b, a, b, a, b, a
 #define set_vals1(a,b) b, a, b, a, b, a, b, a
 
-static void oapv_itx_pb8b_avx(s16* src, s16* dst, int shift, int line)
+static void oapv_itx_part_avx(s16* src, s16* dst, int shift, int line)
 {
     const __m256i coeff_p89_p75 = _mm256_setr_epi16(89, 75, 89, 75, 89, 75, 89, 75, 89, 75, 89, 75, 89, 75, 89, 75); // 89 75
     const __m256i coeff_p50_p18 = _mm256_setr_epi16(50, 18, 50, 18, 50, 18, 50, 18, 50, 18, 50, 18, 50, 18, 50, 18); // 50, 18
@@ -282,13 +282,27 @@ static void oapv_itx_pb8b_avx(s16* src, s16* dst, int shift, int line)
     }
 }
 
-const oapv_fn_itx_t oapv_tbl_fn_itx_avx[2] =
+const oapv_fn_itx_part_t oapv_tbl_fn_itx_part_avx[2] =
 {
-    oapv_itx_pb8b_avx,
+    oapv_itx_part_avx,
         NULL
 };
 
-static int oapv_quant_nnz_avx(u8 qp, int q_matrix[OAPV_BLK_D], s16 *coef, int log2_w, int log2_h,
+static void oapv_itx_avx(s16* src, int shift1, int shift2, int line)
+{
+    // To Do: Merge 2 passes and optimize AVX further
+    ALIGNED_16(s16 dst[OAPV_BLK_D]);
+    oapv_itx_part_avx(src, dst, shift1, line);
+    oapv_itx_part_avx(dst, src, shift2, line);
+}
+
+const oapv_fn_itx_t oapv_tbl_fn_itx_avx[2] =
+{
+    oapv_itx_avx,
+        NULL
+};
+
+static int oapv_quant_nnz_avx(s16 *coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h,
                              u16 scale, int ch_type, int bit_depth, int deadzone_offset)
 {
     int nnz = 0;
@@ -344,7 +358,7 @@ static int oapv_quant_nnz_avx(u8 qp, int q_matrix[OAPV_BLK_D], s16 *coef, int lo
     return nnz;
 }
 
-const oapv_fn_quant_t oapv_tbl_quantb_avx[2] =
+const oapv_fn_quant_old_t oapv_tbl_quant_avx[2] =
 {
     oapv_quant_nnz_avx,
         NULL
@@ -409,7 +423,7 @@ static void oapv_dquant_avx(s16 *coef, int q_matrix[OAPV_BLK_D], int log2_w, int
         }
     }
 }
-const oapv_fn_dquant_t oapv_tbl_fn_dquant_avx[2] =
+const oapv_fn_dquant_old_t oapv_tbl_fn_dquant_avx[2] =
     {
         oapv_dquant_avx,
             NULL,

@@ -107,7 +107,7 @@ int oapv_sad_16b_sse_8x2n(int w, int h, void * src1, void * src2, int s_src1, in
     return (sad);
 }
 
-const oapv_fn_sad_t oapv_tbl_sad_16b_sse[2] =
+const oapv_fn_sad_t oapv_tbl_fn_sad_16b_sse[2] =
 {
     oapv_sad_16b_sse_8x2n,
         NULL
@@ -139,7 +139,7 @@ static void diff_16b_sse_8x8(int w, int h, void * src1, void * src2, int s_src1,
     SSE_DIFF_16B_8PEL(s1 + s_src1*7, s2 + s_src2*7, diff + s_diff*7, m10, m11, m12);
 }
 
-const oapv_fn_diff_t oapv_tbl_diff_16b_sse[2] =
+const oapv_fn_diff_t oapv_tbl_fn_diff_16b_sse[2] =
 {
       diff_16b_sse_8x8,
         NULL
@@ -193,7 +193,7 @@ static s64 ssd_16b_sse_8x8(int w, int h, void * src1, void * src2, int s_src1, i
     return ssd;
 }
 
-const oapv_fn_ssd_t oapv_tbl_ssd_16b_sse[2] =
+const oapv_fn_ssd_t oapv_tbl_fn_ssd_16b_sse[2] =
 {
     ssd_16b_sse_8x8,
         NULL

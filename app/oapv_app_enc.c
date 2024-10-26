@@ -166,6 +166,10 @@ static const args_opt_t enc_args_opts[] = {
         "custom quantization matrix for V \"q1 q2 ... q63 q64\""
     },
     {
+        ARGS_NO_KEY,  "q-matrix-x", ARGS_VAL_TYPE_STRING, 0, NULL,
+        "custom quantization matrix for X \"q1 q2 ... q63 q64\""
+    },
+    {
         ARGS_NO_KEY,  "hash", ARGS_VAL_TYPE_NONE, 0, NULL,
         "embed frame hash value for conformance checking in decoding"
     },
@@ -460,7 +464,7 @@ static int update_param(args_var_t *vars, oapve_param_t *param)
         int   len_cnt = 0;
         while(len_cnt < len_y && cnt < OAPV_BLK_D) {
             sscanf(tmp, "%d", &param->q_matrix_y[cnt]);
-            if(param->q_matrix_y[cnt] < 1 || param->q_matrix_y[cnt] > 256) {
+            if(param->q_matrix_y[cnt] < 1 || param->q_matrix_y[cnt] > 255) {
                 logerr("input value of q_matrix_y is invalid\n");
                 return -1;
             }
@@ -482,7 +486,7 @@ static int update_param(args_var_t *vars, oapve_param_t *param)
         int   len_cnt = 0;
         while(len_cnt < len_u && cnt < OAPV_BLK_D) {
             sscanf(tmp, "%d", &param->q_matrix_u[cnt]);
-            if(param->q_matrix_u[cnt] < 1 || param->q_matrix_u[cnt] > 256) {
+            if(param->q_matrix_u[cnt] < 1 || param->q_matrix_u[cnt] > 255) {
                 logerr("input value of q_matrix_u is invalid\n");
                 return -1;
             }
@@ -504,7 +508,7 @@ static int update_param(args_var_t *vars, oapve_param_t *param)
         int   len_cnt = 0;
         while(len_cnt < len_v && cnt < OAPV_BLK_D) {
             sscanf(tmp, "%d", &param->q_matrix_v[cnt]);
-            if(param->q_matrix_v[cnt] < 1 || param->q_matrix_v[cnt] > 256) {
+            if(param->q_matrix_v[cnt] < 1 || param->q_matrix_v[cnt] > 255) {
                 logerr("input value of q_matrix_v is invalid\n");
                 return -1;
             }
@@ -514,6 +518,28 @@ static int update_param(args_var_t *vars, oapve_param_t *param)
         }
         if(cnt < OAPV_BLK_D) {
             logerr("input number of q_matrix_v is not enough\n");
+            return -1;
+        }
+    }
+
+    int len_x = (int)strlen(vars->q_matrix_x);
+    if (len_x > 0) {
+        param->use_q_matrix = 1;
+        char* tmp = vars->q_matrix_x;
+        int   cnt = 0;
+        int   len_cnt = 0;
+        while (len_cnt < len_x && cnt < OAPV_BLK_D) {
+            sscanf(tmp, "%d", &param->q_matrix_x[cnt]);
+            if (param->q_matrix_x[cnt] < 1 || param->q_matrix_x[cnt] > 255) {
+                logerr("input value of q_matrix_x is invalid\n");
+                return -1;
+            }
+            len_cnt += (int)log10(param->q_matrix_x[cnt]) + 2;
+            tmp = vars->q_matrix_x + len_cnt;
+            cnt++;
+        }
+        if (cnt < OAPV_BLK_D) {
+            logerr("input number of q_matrix_x is not enough\n");
             return -1;
         }
     }
@@ -534,6 +560,12 @@ static int update_param(args_var_t *vars, oapve_param_t *param)
         if(len_v == 0) {
             for(int i = 0; i < OAPV_BLK_D; i++) {
                 param->q_matrix_v[i] = 16;
+            }
+        }
+
+        if (len_x == 0) {
+            for (int i = 0; i < OAPV_BLK_D; i++) {
+                param->q_matrix_x[i] = 16;
             }
         }
     }
@@ -607,8 +639,8 @@ int main(int argc, const char **argv)
     oapv_imgb_t   *imgb_w = NULL; // image buffer for write
     oapv_imgb_t   *imgb_i = NULL; // image buffer for input
     oapv_imgb_t   *imgb_o = NULL; // image buffer for output
-    oapv_frms_t    ifrms;         // frames for input
-    oapv_frms_t    rfrms;         // frames for reconstruction
+    oapv_frms_t    ifrms = { 0 }; // frames for input
+    oapv_frms_t    rfrms = { 0 }; // frames for reconstruction
     int            ret;
     oapv_clk_t     clk_beg, clk_end, clk_tot;
     oapv_mtime_t   au_cnt, au_skip;

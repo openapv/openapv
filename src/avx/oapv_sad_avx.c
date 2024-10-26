@@ -32,7 +32,7 @@
 #include "oapv_sad_avx.h"
 
 #if X86_SSE
-const oapv_fn_sad_t oapv_tbl_sad_16b_avx[2] =
+const oapv_fn_sad_t oapv_tbl_fn_sad_16b_avx[2] =
 {
     oapv_sad_16b_sse_8x2n,
         NULL
@@ -58,7 +58,7 @@ static s64 ssd_16b_sse_8x8_avx(int w, int h, void* src1, void* src2, int s_src1,
     return t[0] + t[1] + t[2] + t[3];
 }
 
-const oapv_fn_ssd_t oapv_tbl_ssd_16b_avx[2] =
+const oapv_fn_ssd_t oapv_tbl_fn_ssd_16b_avx[2] =
 {
     ssd_16b_sse_8x8_avx,
         NULL

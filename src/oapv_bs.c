@@ -331,7 +331,6 @@ void* oapv_bsr_sink(oapv_bs_t* bs)
 
 void oapv_bsr_move(oapv_bs_t* bs, u8* pos)
 {
-    oapv_assert(pos >= bs->cur && pos <= bs->end);
     bs->code = 0;
     bs->leftbits = 0;
     bs->cur = pos;
