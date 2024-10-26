@@ -58,7 +58,7 @@ int oapv_sad_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2, i
     return (sad >> (bit_depth - 8));
 }
 
-const oapv_fn_sad_t oapv_tbl_sad_16b[2] =
+const oapv_fn_sad_t oapv_tbl_fn_sad_16b[2] =
 {
     oapv_sad_16b,
         NULL
@@ -87,7 +87,7 @@ void oapv_diff_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2,
     }
 }
 
-const oapv_fn_diff_t oapv_tbl_diff_16b[2] =
+const oapv_fn_diff_t oapv_tbl_fn_diff_16b[2] =
 {
     oapv_diff_16b,
         NULL
@@ -119,7 +119,7 @@ s64 oapv_ssd_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2, i
     return ssd;
 }
 
-const oapv_fn_ssd_t oapv_tbl_ssd_16b[2] =
+const oapv_fn_ssd_t oapv_tbl_fn_ssd_16b[2] =
 {
     oapv_ssd_16b,
         NULL

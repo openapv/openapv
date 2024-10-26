@@ -35,9 +35,9 @@
 #include "oapv_def.h"
 
 #if X86_SSE
-extern const oapv_fn_sad_t oapv_tbl_sad_16b_sse[2];
-extern const oapv_fn_ssd_t oapv_tbl_ssd_16b_sse[2];
-extern const oapv_fn_diff_t oapv_tbl_diff_16b_sse[2];
+extern const oapv_fn_sad_t oapv_tbl_fn_sad_16b_sse[2];
+extern const oapv_fn_ssd_t oapv_tbl_fn_ssd_16b_sse[2];
+extern const oapv_fn_diff_t oapv_tbl_fn_diff_16b_sse[2];
 int oapv_sad_16b_sse_8x2n(int w, int h, void * src1, void * src2, int s_src1, int s_src2, int bit_depth);
 int oapv_dc_removed_had8x8_sse(pel* org, int s_org);
 

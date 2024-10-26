@@ -41,18 +41,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 extern const oapv_fn_tx_t oapv_tbl_fn_tx[2];
-
 extern const oapv_fn_quant_t oapv_tbl_fn_quant[2];
-extern const oapv_fn_quant_t_no_qp_matrix oapv_tbl_fn_quant_no_qp_matrix[2];
-extern const oapv_fn_dquant_t_no_qp_matrix oapv_tbl_fn_dquant_no_qp_matrix[2];
 
 extern const int oapv_quant_scale[6];
 void oapv_trans(oapve_ctx_t* ctx, s16 * coef, int log2_w, int log2_h, int bit_depth);
-void oapv_tx_pb8b(s16* src, s16* dst, int shift, int line);
-void oapv_itx_pb8_get_wo_sft(s16* src, s16* dst, s32* dst32, int shift, int line);
-
-int    oapv_quant_nnz(u8 qp, int q_matrix[OAPV_BLK_D], s16* coef,
-    int log2_w, int log2_h, u16 scale, int ch_type, int bit_depth, int deadzone_offset);
+void oapv_itx_get_wo_sft(s16* src, s16* dst, s32* dst32, int shift, int line);
 
 ///////////////////////////////////////////////////////////////////////////////
 // end of encoder code
@@ -75,12 +68,10 @@ int    oapv_quant_nnz(u8 qp, int q_matrix[OAPV_BLK_D], s16* coef,
 #define ITX_CLIP_32(x) \
     (s32)(((x)<=MIN_TX_VAL_32)? MIN_TX_VAL_32: (((x)>=MAX_TX_VAL_32)? MAX_TX_VAL_32: (x)))
 
+extern const oapv_fn_itx_part_t oapv_tbl_fn_itx_part[2];
 extern const oapv_fn_itx_t oapv_tbl_fn_itx[2];
 extern const oapv_fn_dquant_t oapv_tbl_fn_dquant[2];
 extern const oapv_fn_itx_adj_t oapv_tbl_fn_itx_adj[2];
-
-void oapv_itrans(const oapv_fn_itx_t* fn_itx, s16* coef, int log2_w, int log2_h, int bit_depth);
-void oapv_itx_pb8b (s16 * src, s16 * dst, int shift, int line);
 
 ///////////////////////////////////////////////////////////////////////////////
 // end of decoder code
