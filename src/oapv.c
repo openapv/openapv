@@ -964,8 +964,7 @@ static int enc_thread_tile(void *arg)
     oapve_tile_t* tile = ctx->tile;
     int ret = OAPV_OK, i;
 
-    while (1)
-    {
+    while (1) {
         // find not encoded tile
         oapv_tpool_enter_cs(ctx->sync_obj);
         for (i = 0; i < ctx->num_tiles; i++)
