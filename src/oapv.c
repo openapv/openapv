@@ -1139,7 +1139,6 @@ static int enc_frm_prepare(oapve_ctx_t *ctx, oapv_imgb_t *imgb_i, oapv_imgb_t *i
     }
 
     /* initialize bitstream container */
-    //oapv_bsw_init(&ctx->bs, bitb->addr, bitb->bsize, NULL); // TODO : remove
     ctx->w = (imgb_i->aw[Y_C] > 0)? imgb_i->aw[Y_C]: imgb_i->w[Y_C];
     ctx->h = (imgb_i->ah[Y_C] > 0)? imgb_i->ah[Y_C]: imgb_i->h[Y_C];
 
