@@ -500,7 +500,15 @@ static double enc_block_rdo_medium(oapve_ctx_t* ctx, oapve_core_t* core, int log
                     continue;
                 }
             }
-            int q_setp = (core->q_mat_dec[c][scanp[j]] + (1 << (core->dq_shift[c] - 1))) >> core->dq_shift[c];
+            int q_step = 0;
+            if (core->dq_shift[c] > 0)
+            {
+                q_step = (core->q_mat_dec[c][scanp[j]] + (1 << (core->dq_shift[c] - 1))) >> core->dq_shift[c];
+            }
+            else
+            {
+                q_step = (core->q_mat_dec[c][scanp[j]]) << (-core->dq_shift[c]);
+            }
 
             for (int i = 1; i < adj_rng && !zero_dist; i++) {
                 if (i > 2) {
@@ -517,8 +525,8 @@ static double enc_block_rdo_medium(oapve_ctx_t* ctx, oapve_core_t* core, int log
 
                 s16 test_coef = org_coef + map_idx_diff[i];
                 coeff[scanp[j]] = test_coef;
-                int step_diff = q_setp * map_idx_diff[i];
-                ctx->fn_itx_adj[0](rec_ups, rec_tmp, j, step_diff, 16);
+                int step_diff = q_step * map_idx_diff[i];
+                ctx->fn_itx_adj[0](rec_ups, rec_tmp, j, step_diff, 9);
                 for (int k = 0; k < 64; k++)
                 {
                     recon[k] = (rec_tmp[k] + 512) >> 10;
