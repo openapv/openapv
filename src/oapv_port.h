@@ -174,7 +174,7 @@ void oapv_trace_line(char* pre);
     defined(_M_X64) || defined(__amd64__) || defined(_M_AMD64) ||   \
     defined(__i386__)
 #define X86_SSE 1
-#elif defined(__aarch64__) || defined(__ARM_NEON) || defined(__ARM_NEON__)
+#elif defined(__aarch64__)
 #define ARM_NEON 1
 #endif
 
