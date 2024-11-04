@@ -29,39 +29,42 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #include <stdarg.h>
 #include "oapv_port.h"
 
-void* oapv_malloc_align32(int size)
+void *oapv_malloc_align32(int size)
 {
     void *p = NULL;
 
     // p variable is covered under ap. It's user rosponsibility to free it using funcion oapv_mfree_align32.
-    p = oapv_malloc(size + 32 + sizeof(void*));
-    if(p)
-    {
+    p = oapv_malloc(size + 32 + sizeof(void *));
+    if(p) {
 
 #ifdef _IS64BIT // for 64bit CPU
-        void **ap = (void**)(((u64)(p) + 32 + sizeof(void*) - 1 ) & (~0x1F));
+        void **ap = (void **)(((u64)(p) + 32 + sizeof(void *) - 1) & (~0x1F));
 #else // for 32bit CPU
-        void **ap = (void**)(((u32)(p) + 32 + sizeof(void*) - 1 ) & (~0x1F));
+        void **ap = (void **)(((u32)(p) + 32 + sizeof(void *) - 1) & (~0x1F));
 #endif
-        ap[-1] = (void*)p;
+        ap[-1] = (void *)p;
         return (void *)ap;
     }
     return NULL;
 }
 
-void oapv_mfree_align32(void* p)
+void oapv_mfree_align32(void *p)
 {
-   if(p) oapv_mfree( ((void**)p)[-1] );
+    if(p) {
+        oapv_mfree(((void **)p)[-1]);
+    }
 }
 
-void oapv_trace0(char * filename, int line, const char *fmt, ...)
+void oapv_trace0(char *filename, int line, const char *fmt, ...)
 {
-    char str[1024]={'\0',};
-    if(filename != NULL && line >= 0) sprintf(str, "[%s:%d] ", filename, line);
+    char str[1024] = { '\0' };
+
+    if(filename != NULL && line >= 0) {
+        sprintf(str, "[%s:%d] ", filename, line);
+    }
     va_list args;
     va_start(args, fmt);
     vsprintf(str + strlen(str), fmt, args);
@@ -69,17 +72,19 @@ void oapv_trace0(char * filename, int line, const char *fmt, ...)
     printf("%s", str);
 }
 
-void oapv_trace_line(char * pre)
+void oapv_trace_line(char *pre)
 {
-    char str[128]={'\0',};
     const int chars = 80;
-    int len = (pre == NULL)? 0: (int)strlen(pre);
-    if(len > 0)
-    {
+    char      str[128] = { '\0' };
+    int       len = (pre == NULL) ? 0 : (int)strlen(pre);
+
+    if(len > 0) {
         sprintf(str, "%s ", pre);
         len = (int)strlen(str);
     }
-    for(int i = len ; i< chars; i++) {str[i] = '=';}
+    for(int i = len; i < chars; i++) {
+        str[i] = '=';
+    }
     str[chars] = '\0';
     printf("%s\n", str);
 }

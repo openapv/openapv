@@ -34,88 +34,93 @@
 
 #include "oapv_def.h"
 
-#define oapv_max(a, b) (((a) > (b)) ? (a) : (b))
-#define oapv_min(a, b) (((a) < (b)) ? (a) : (b))
-#define oapv_median(x, y, z) ((((y) < (z)) ^ ((z) < (x))) ? (((x) < (y)) ^ ((z) < (x))) ? (y) : (x) : (z))
+#define oapv_max(a, b)               (((a) > (b)) ? (a) : (b))
+#define oapv_min(a, b)               (((a) < (b)) ? (a) : (b))
+#define oapv_median(x, y, z)         ((((y) < (z)) ^ ((z) < (x))) ? (((x) < (y)) ^ ((z) < (x))) ? (y) : (x) : (z))
 
-#define oapv_abs(a) (((a) > (0)) ? (a) : (-(a)))
-#define oapv_abs64(a) (((a) ^ ((a) >> 63)) - ((a) >> 63)) // only for 64bit variable
-#define oapv_abs32(a) (((a) ^ ((a) >> 31)) - ((a) >> 31)) // only for 32bit variable
-#define oapv_abs16(a) (((a) ^ ((a) >> 15)) - ((a) >> 15)) // only for 16bit variable
+#define oapv_abs(a)                  (((a) > (0)) ? (a) : (-(a)))
+#define oapv_abs64(a)                (((a) ^ ((a) >> 63)) - ((a) >> 63)) // only for 64bit variable
+#define oapv_abs32(a)                (((a) ^ ((a) >> 31)) - ((a) >> 31)) // only for 32bit variable
+#define oapv_abs16(a)                (((a) ^ ((a) >> 15)) - ((a) >> 15)) // only for 16bit variable
 
-#define oapv_clip3(min, max, val) oapv_max((min), oapv_min((max), (val)))
-#define oapv_clip16_add(a, b) (oapv_min((a) + (b), 0xffff)) // clipping addition
+#define oapv_clip3(min, max, val)    oapv_max((min), oapv_min((max), (val)))
+#define oapv_clip16_add(a, b)        (oapv_min((a) + (b), 0xffff)) // clipping addition
 
 // macro to get a sign from a value.
 // operation: if(val < 0) return 1, else return 0
-#define oapv_get_sign(val) ((val < 0) ? 1 : 0)
+#define oapv_get_sign(val)           ((val < 0) ? 1 : 0)
 
 // macro to set sign into a value.
 // operation: if(sign == 0) return val, else if(sign == 1) return -val
-#define oapv_set_sign(val, sign) ((sign) ? -val : val)
+#define oapv_set_sign(val, sign)     ((sign) ? -val : val)
 
 // macro to get a sign from a 16-bit value.
 // operation: if(val < 0) return 1, else return 0
-#define oapv_get_sign16(val) (((val) >> 15) & 1)
+#define oapv_get_sign16(val)         (((val) >> 15) & 1)
 
 // macro to set sign to a 16-bit value.
 // operation: if(sign == 0) return val, else if(sign == 1) return -val
-#define oapv_set_sign16(val, sign) (((val) ^ ((s16)((sign) << 15) >> 15)) + (sign))
+#define oapv_set_sign16(val, sign)   (((val) ^ ((s16)((sign) << 15) >> 15)) + (sign))
 
-#define oapv_modulo_idx(num, mod) (((num) + (mod)) % (mod))
+#define oapv_modulo_idx(num, mod)    (((num) + (mod)) % (mod))
 
-#define oapv_align_value(val, align) ((((val) + (align)-1) / (align)) * (align))
+#define oapv_align_value(val, align) ((((val) + (align) - 1) / (align)) * (align))
 
 static inline int chroma_format_idc_to_color_format(int chroma_format_idc)
 {
-    return ((chroma_format_idc == 0) ? OAPV_CF_YCBCR400 : \
-        (chroma_format_idc == 1) ? OAPV_CF_YCBCR420 : \
-        (chroma_format_idc == 2)   ? OAPV_CF_YCBCR422 :
-        (chroma_format_idc == 3)     ? OAPV_CF_YCBCR444 : OAPV_CF_YCBCR4444);
+    return ((chroma_format_idc == 0)   ? OAPV_CF_YCBCR400
+            : (chroma_format_idc == 1) ? OAPV_CF_YCBCR420
+            : (chroma_format_idc == 2) ? OAPV_CF_YCBCR422
+            : (chroma_format_idc == 3) ? OAPV_CF_YCBCR444
+                                       : OAPV_CF_YCBCR4444);
 }
 
 static inline int color_format_to_chroma_format_idc(int color_format)
 {
-    if (color_format == OAPV_CF_PLANAR2)
-    {
+    if(color_format == OAPV_CF_PLANAR2) {
         return 2;
     }
-    else
-    {
-    return ((color_format == OAPV_CF_YCBCR400) ? 0 : \
-        (color_format == OAPV_CF_YCBCR420) ? 1 : \
-                (color_format == OAPV_CF_YCBCR422)   ? 2 :
-                (color_format == OAPV_CF_YCBCR444)     ? 3 : 4);
+    else {
+        return ((color_format == OAPV_CF_YCBCR400)   ? 0
+                : (color_format == OAPV_CF_YCBCR420) ? 1
+                : (color_format == OAPV_CF_YCBCR422) ? 2
+                : (color_format == OAPV_CF_YCBCR444) ? 3
+                                                     : 4);
     }
 }
 
 static inline int get_chroma_sft_w(int chroma_format_idc)
 {
-    return ((chroma_format_idc == 0) ? 1 : \
-        (chroma_format_idc == 1) ? 1 : \
-        (chroma_format_idc == 2)   ? 1 : 0);
+    return ((chroma_format_idc == 0)   ? 1
+            : (chroma_format_idc == 1) ? 1
+            : (chroma_format_idc == 2) ? 1
+                                       : 0);
 }
 
 static inline int get_chroma_sft_h(int chroma_format_idc)
 {
-    return ((chroma_format_idc == 0) ? 1 : (chroma_format_idc == 1) ? 1 : 0);
+    return ((chroma_format_idc == 0)   ? 1
+            : (chroma_format_idc == 1) ? 1
+                                       : 0);
 }
 static inline int get_num_comp(int chroma_format_idc)
 {
 
-    return (chroma_format_idc == 0) ? 1 : (chroma_format_idc == 4) ? 4 : 3;
+    return (chroma_format_idc == 0)   ? 1
+           : (chroma_format_idc == 4) ? 4
+                                      : 3;
 }
 
 static inline void imgb_addref(oapv_imgb_t *imgb)
 {
-    if (imgb->addref) {
+    if(imgb->addref) {
         imgb->addref(imgb);
     }
 }
 
 static inline void imgb_release(oapv_imgb_t *imgb)
 {
-    if (imgb->release) {
+    if(imgb->release) {
         imgb->release(imgb);
     }
 }
@@ -123,15 +128,14 @@ static inline void imgb_release(oapv_imgb_t *imgb)
 /* MD5 structure */
 typedef struct
 {
-   u32 h[4];    /* hash state ABCD */
-   u8 msg[64];  /*input buffer */
-   u32 bits[2]; /* number of bits, modulo 2^64 (lsb first)*/
+    u32 h[4];    /* hash state ABCD */
+    u8  msg[64]; /*input buffer */
+    u32 bits[2]; /* number of bits, modulo 2^64 (lsb first)*/
 } oapv_md5_t;
 
 /* MD5 Functions */
 void oapv_imgb_set_md5(oapv_imgb_t *imgb);
 void oapv_block_copy(s16 *src, int src_stride, s16 *dst, int dst_stride, int log2_copy_w, int log2_copy_h);
-
 int oapv_set_md5_pld(oapvm_t mid, int group_id, oapv_imgb_t *rec);
 
 #if X86_SSE
@@ -139,7 +143,7 @@ int oapv_check_cpu_info_x86();
 #endif
 
 /* For debugging (START) */
-#define ENC_DEC_DUMP    0
+#define ENC_DEC_DUMP 0
 #if ENC_DEC_DUMP
 #if defined(__GNUC__)
 #pragma message "warning! syntax dump is on"
@@ -147,26 +151,26 @@ int oapv_check_cpu_info_x86();
 #pragma message("warning! syntax dump is on")
 #endif
 
-#define DUMP_ENABLE_HLS            1
-#define DUMP_ENABLE_COEF           1
+#define DUMP_ENABLE_HLS  1
+#define DUMP_ENABLE_COEF 1
 
 typedef enum _OAPV_DUMP_OPTION {
     OAPV_DUMP_HLS,
     OAPV_DUMP_COEF,
 } OAPV_DUMP_OPTION;
 
-extern FILE* oapv_fp_dump;
-extern int oapv_is_dump;
+extern FILE *oapv_fp_dump;
+extern int   oapv_is_dump;
 
-void oapv_dump_string0(int cond, const char* fmt, ...);
-void oapv_dump_coef0(short* coef, int size, int x, int y, int c);
+void oapv_dump_string0(int cond, const char *fmt, ...);
+void oapv_dump_coef0(short *coef, int size, int x, int y, int c);
 void oapv_dump_create0(int is_enc);
 void oapv_dump_delete0();
 
 // Syntax dump macro functions
 #define DUMP_CREATE(is_enc) oapv_dump_create0(is_enc)
-#define DUMP_DELETE() oapv_dump_delete0()
-#define DUMP_SET(val) oapv_is_dump = val
+#define DUMP_DELETE()       oapv_dump_delete0()
+#define DUMP_SET(val)       oapv_is_dump = val
 #define DUMP_HLS(name, val) \
     oapv_dump_string0(OAPV_DUMP_HLS, "%-34s: %12d\n", #name, val)
 #define DUMP_COEF(coef, size, x, y, c) \
@@ -185,4 +189,3 @@ void oapv_dump_delete0();
 /* For debugging (END) */
 
 #endif /* __OAPV_UTIL_H__ */
-

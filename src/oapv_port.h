@@ -86,8 +86,8 @@ typedef s32      dpel;
         }                  \
     }
 
-void* oapv_malloc_align32(int size);
-void  oapv_mfree_align32(void* p);
+void *oapv_malloc_align32(int size);
+void oapv_mfree_align32(void *p);
 
 #define oapv_mcpy(dst, src, size)    memcpy((dst), (src), (size))
 #define oapv_mset(dst, v, size)      memset((dst), (v), (size))
@@ -95,7 +95,7 @@ void  oapv_mfree_align32(void* p);
 #define oapv_mset_x128(dst, v, size) memset((dst), (v), (size))
 #define oapv_mcmp(dst, src, size)    memcmp((dst), (src), (size))
 
-static __inline void oapv_mset_16b(s16* dst, s16 v, int cnt)
+static __inline void oapv_mset_16b(s16 *dst, s16 v, int cnt)
 {
     int i;
     for(i = 0; i < cnt; i++)
@@ -105,8 +105,8 @@ static __inline void oapv_mset_16b(s16* dst, s16 v, int cnt)
 /*****************************************************************************
  * trace and assert
  *****************************************************************************/
-void oapv_trace0(char* filename, int line, const char* fmt, ...);
-void oapv_trace_line(char* pre);
+void oapv_trace0(char *filename, int line, const char *fmt, ...);
+void oapv_trace_line(char *pre);
 #ifndef OAPV_TRACE
 #define OAPV_TRACE 0
 #endif

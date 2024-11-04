@@ -37,18 +37,15 @@ int oapv_sad_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2, i
 {
     u16 *s1;
     s16 *s2;
-
-    int i, j, sad;
+    int  i, j, sad;
 
     s1 = (u16 *)src1;
     s2 = (s16 *)src2;
 
     sad = 0;
 
-    for(i = 0; i < h; i++)
-    {
-        for(j = 0; j < w; j++)
-        {
+    for(i = 0; i < h; i++) {
+        for(j = 0; j < w; j++) {
             sad += oapv_abs16((s16)s1[j] - (s16)s2[j]);
         }
         s1 += s_src1;
@@ -58,27 +55,23 @@ int oapv_sad_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2, i
     return (sad >> (bit_depth - 8));
 }
 
-const oapv_fn_sad_t oapv_tbl_fn_sad_16b[2] =
-{
+const oapv_fn_sad_t oapv_tbl_fn_sad_16b[2] = {
     oapv_sad_16b,
-        NULL
+    NULL
 };
 
 /* DIFF **********************************************************************/
-void oapv_diff_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int s_diff, s16 * diff, int bit_depth)
+void oapv_diff_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int s_diff, s16 *diff, int bit_depth)
 {
     s16 *s1;
     s16 *s2;
-
-    int i, j;
+    int  i, j;
 
     s1 = (s16 *)src1;
     s2 = (s16 *)src2;
 
-    for(i = 0; i < h; i++)
-    {
-        for(j = 0; j < w; j++)
-        {
+    for(i = 0; i < h; i++) {
+        for(j = 0; j < w; j++) {
             diff[j] = (s16)s1[j] - (s16)s2[j];
         }
         diff += s_diff;
@@ -87,29 +80,26 @@ void oapv_diff_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2,
     }
 }
 
-const oapv_fn_diff_t oapv_tbl_fn_diff_16b[2] =
-{
+const oapv_fn_diff_t oapv_tbl_fn_diff_16b[2] = {
     oapv_diff_16b,
-        NULL
+    NULL
 };
 
 /* SSD ***********************************************************************/
 s64 oapv_ssd_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int bit_depth)
 {
-    s16 * s1;
-    s16 * s2;
-    int     i, j, diff;
-    s64   ssd;
+    s16 *s1;
+    s16 *s2;
+    int  i, j, diff;
+    s64  ssd;
 
     s1 = (s16 *)src1;
     s2 = (s16 *)src2;
 
     ssd = 0;
 
-    for(i = 0; i < h; i++)
-    {
-        for(j = 0; j < w; j++)
-        {
+    for(i = 0; i < h; i++) {
+        for(j = 0; j < w; j++) {
             diff = s1[j] - s2[j];
             ssd += (diff * diff);
         }
@@ -119,21 +109,19 @@ s64 oapv_ssd_16b(int w, int h, void *src1, void *src2, int s_src1, int s_src2, i
     return ssd;
 }
 
-const oapv_fn_ssd_t oapv_tbl_fn_ssd_16b[2] =
-{
+const oapv_fn_ssd_t oapv_tbl_fn_ssd_16b[2] = {
     oapv_ssd_16b,
-        NULL
+    NULL
 };
 
-int oapv_dc_removed_had8x8(pel* org, int s_org)
+int oapv_dc_removed_had8x8(pel *org, int s_org)
 {
-    int k, i, j, jj;
-    int satd = 0;
-    int sub[64], interm1[8][8], interm2[8][8], interm3[8][8];
-    pel* orgn = org;
+    int  k, i, j, jj;
+    int  satd = 0;
+    int  sub[64], interm1[8][8], interm2[8][8], interm3[8][8];
+    pel *orgn = org;
 
-    for (k = 0; k < 64; k += 8)
-    {
+    for(k = 0; k < 64; k += 8) {
         sub[k + 0] = orgn[0];
         sub[k + 1] = orgn[1];
         sub[k + 2] = orgn[2];
@@ -146,8 +134,7 @@ int oapv_dc_removed_had8x8(pel* org, int s_org)
     }
 
     /* horizontal */
-    for (j = 0; j < 8; j++)
-    {
+    for(j = 0; j < 8; j++) {
         jj = j << 3;
         interm2[j][0] = sub[jj] + sub[jj + 4];
         interm2[j][1] = sub[jj + 1] + sub[jj + 5];
@@ -178,8 +165,7 @@ int oapv_dc_removed_had8x8(pel* org, int s_org)
     }
 
     /* vertical */
-    for (i = 0; i < 8; i++)
-    {
+    for(i = 0; i < 8; i++) {
         interm3[0][i] = interm2[0][i] + interm2[4][i];
         interm3[1][i] = interm2[1][i] + interm2[5][i];
         interm3[2][i] = interm2[2][i] + interm2[6][i];
@@ -209,14 +195,11 @@ int oapv_dc_removed_had8x8(pel* org, int s_org)
     }
 
     satd = 0;
-    for (j = 1; j < 8; j++)
-    {
+    for(j = 1; j < 8; j++) {
         satd += interm2[0][j];
     }
-    for (i = 1; i < 8; i++)
-    {
-        for (j = 0; j < 8; j++)
-        {
+    for(i = 1; i < 8; i++) {
+        for(j = 0; j < 8; j++) {
             satd += interm2[i][j];
         }
     }

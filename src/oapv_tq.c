@@ -29,7 +29,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #include "oapv_tq.h"
 #include <math.h>
 
@@ -38,21 +37,18 @@
 #if ENABLE_ENCODER
 ///////////////////////////////////////////////////////////////////////////////
 
+const int   oapv_quant_scale[6] = { 26214, 23302, 20560, 18396, 16384, 14769 };
 
-const int oapv_quant_scale[6] = { 26214, 23302, 20560, 18396, 16384, 14769 };
-
-static void oapv_tx_part(s16* src, s16* dst, int shift, int line)
+static void oapv_tx_part(s16 *src, s16 *dst, int shift, int line)
 {
     int j, k;
     int E[4], O[4];
     int EE[2], EO[2];
     int add = 1 << (shift - 1);
 
-    for (j = 0; j < line; j++)
-    {
+    for(j = 0; j < line; j++) {
         /* E and O*/
-        for (k = 0; k < 4; k++)
-        {
+        for(k = 0; k < 4; k++) {
             E[k] = src[j * 8 + k] + src[j * 8 + 7 - k];
             O[k] = src[j * 8 + k] - src[j * 8 + 7 - k];
         }
@@ -74,23 +70,22 @@ static void oapv_tx_part(s16* src, s16* dst, int shift, int line)
     }
 }
 
-const oapv_fn_tx_t oapv_tbl_fn_tx[2] =
-{
+const oapv_fn_tx_t oapv_tbl_fn_tx[2] = {
     oapv_tx_part,
-        NULL
+    NULL
 };
 
 static __inline int get_transform_shift(int log2_size, int type, int bit_depth)
 {
-    if (type == 0) {
-        return ((log2_size) - 1 + bit_depth - 8);
+    if(type == 0) {
+        return ((log2_size)-1 + bit_depth - 8);
     }
     else {
         return ((log2_size) + 6);
     }
 }
 
-void oapv_trans(oapve_ctx_t * ctx, s16 * coef, int log2_w, int log2_h, int bit_depth)
+void oapv_trans(oapve_ctx_t *ctx, s16 *coef, int log2_w, int log2_h, int bit_depth)
 {
     int shift1 = get_transform_shift(log2_w, 0, bit_depth);
     int shift2 = get_transform_shift(log2_h, 1, bit_depth);
@@ -98,9 +93,9 @@ void oapv_trans(oapve_ctx_t * ctx, s16 * coef, int log2_w, int log2_h, int bit_d
     ALIGNED_16(s16 tb[OAPV_BLK_D]);
     (ctx->fn_txb)[0](coef, tb, shift1, 1 << log2_h);
     (ctx->fn_txb)[0](tb, coef, shift2, 1 << log2_w);
-
 }
-static int oapv_quant(s16* coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h, int bit_depth, int deadzone_offset)
+
+static int oapv_quant(s16 *coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h, int bit_depth, int deadzone_offset)
 {
     s64 lev;
     s32 offset;
@@ -109,12 +104,13 @@ static int oapv_quant(s16* coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, in
     int shift;
     int tr_shift;
     int log2_size = (log2_w + log2_h) >> 1;
+
     tr_shift = MAX_TX_DYNAMIC_RANGE - bit_depth - log2_size;
     shift = QUANT_SHIFT + tr_shift + (qp / 6);
     offset = deadzone_offset << (shift - 9);
     int pixels = (1 << (log2_w + log2_h));
-    for (i = 0; i < pixels; i++)
-    {
+
+    for(i = 0; i < pixels; i++) {
         sign = oapv_get_sign(coef[i]);
         lev = (s64)oapv_abs(coef[i]) * (q_matrix[i]);
         lev = (lev + offset) >> shift;
@@ -124,10 +120,9 @@ static int oapv_quant(s16* coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, in
     return OAPV_OK;
 }
 
-const oapv_fn_quant_t oapv_tbl_fn_quant[2] =
-{
+const oapv_fn_quant_t oapv_tbl_fn_quant[2] = {
     oapv_quant,
-        NULL
+    NULL
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -135,18 +130,16 @@ const oapv_fn_quant_t oapv_tbl_fn_quant[2] =
 #endif // ENABLE_ENCODER
 ///////////////////////////////////////////////////////////////////////////////
 
-void oapv_itx_get_wo_sft(s16* src, s16* dst, s32* dst32, int shift, int line)
+void oapv_itx_get_wo_sft(s16 *src, s16 *dst, s32 *dst32, int shift, int line)
 {
     int j, k;
     s32 E[4], O[4];
     s32 EE[2], EO[2];
     int add = 1 << (shift - 1);
 
-    for (j = 0; j < line; j++)
-    {
+    for(j = 0; j < line; j++) {
         /* Utilizing symmetry properties to the maximum to minimize the number of multiplications */
-        for (k = 0; k < 4; k++)
-        {
+        for(k = 0; k < 4; k++) {
             O[k] = oapv_tbl_tm8[1][k] * src[1 * line + j] + oapv_tbl_tm8[3][k] * src[3 * line + j] + oapv_tbl_tm8[5][k] * src[5 * line + j] + oapv_tbl_tm8[7][k] * src[7 * line + j];
         }
 
@@ -161,8 +154,7 @@ void oapv_itx_get_wo_sft(s16* src, s16* dst, s32* dst32, int shift, int line)
         E[1] = EE[1] + EO[1];
         E[2] = EE[1] - EO[1];
 
-        for (k = 0; k < 4; k++)
-        {
+        for(k = 0; k < 4; k++) {
             dst32[j * 8 + k] = E[k] + O[k];
             dst32[j * 8 + k + 4] = E[3 - k] - O[3 - k];
 
@@ -172,18 +164,16 @@ void oapv_itx_get_wo_sft(s16* src, s16* dst, s32* dst32, int shift, int line)
     }
 }
 
-static void oapv_itx_part(s16* src, s16* dst, int shift, int line)
+static void oapv_itx_part(s16 *src, s16 *dst, int shift, int line)
 {
     int j, k;
     int E[4], O[4];
     int EE[2], EO[2];
     int add = 1 << (shift - 1);
 
-    for (j = 0; j < line; j++)
-    {
+    for(j = 0; j < line; j++) {
         /* Utilizing symmetry properties to the maximum to minimize the number of multiplications */
-        for (k = 0; k < 4; k++)
-        {
+        for(k = 0; k < 4; k++) {
             O[k] = oapv_tbl_tm8[1][k] * src[1 * line + j] + oapv_tbl_tm8[3][k] * src[3 * line + j] + oapv_tbl_tm8[5][k] * src[5 * line + j] + oapv_tbl_tm8[7][k] * src[7 * line + j];
         }
 
@@ -198,31 +188,28 @@ static void oapv_itx_part(s16* src, s16* dst, int shift, int line)
         E[1] = EE[1] + EO[1];
         E[2] = EE[1] - EO[1];
 
-        for (k = 0; k < 4; k++)
-        {
-            dst[j * 8 + k]     = ((E[k] + O[k] + add) >> shift);
+        for(k = 0; k < 4; k++) {
+            dst[j * 8 + k] = ((E[k] + O[k] + add) >> shift);
             dst[j * 8 + k + 4] = ((E[3 - k] - O[3 - k] + add) >> shift);
         }
     }
 }
 
-const oapv_fn_itx_part_t oapv_tbl_fn_itx_part[2] =
-{
+const oapv_fn_itx_part_t oapv_tbl_fn_itx_part[2] = {
     oapv_itx_part,
-        NULL
+    NULL
 };
 
-static void oapv_itx(s16* src, int shift1, int shift2, int line)
+static void oapv_itx(s16 *src, int shift1, int shift2, int line)
 {
     ALIGNED_16(s16 dst[OAPV_BLK_D]);
     oapv_itx_part(src, dst, shift1, line);
     oapv_itx_part(dst, src, shift2, line);
 }
 
-const oapv_fn_itx_t oapv_tbl_fn_itx[2] =
-{
+const oapv_fn_itx_t oapv_tbl_fn_itx[2] = {
     oapv_itx,
-        NULL
+    NULL
 };
 
 static void oapv_dquant(s16 *coef, s16 q_matrix[OAPV_BLK_D], int log2_w, int log2_h, s8 shift)
@@ -231,43 +218,36 @@ static void oapv_dquant(s16 *coef, s16 q_matrix[OAPV_BLK_D], int log2_w, int log
     int lev;
     int pixels = (1 << (log2_w + log2_h));
 
-    if (shift > 0)
-    {
+    if(shift > 0) {
         s32 offset = (1 << (shift - 1));
-        for (i = 0; i < pixels; i++)
-        {
+        for(i = 0; i < pixels; i++) {
             lev = (coef[i] * q_matrix[i] + offset) >> shift;
             coef[i] = (s16)oapv_clip3(-32768, 32767, lev);
         }
     }
-    else
-    {
+    else {
         int left_shift = -shift;
-        for (i = 0; i < pixels; i++)
-        {
+        for(i = 0; i < pixels; i++) {
             lev = (coef[i] * q_matrix[i]) << left_shift;
             coef[i] = (s16)oapv_clip3(-32768, 32767, lev);
         }
     }
 }
-const oapv_fn_dquant_t oapv_tbl_fn_dquant[2] =
-{
+
+const oapv_fn_dquant_t oapv_tbl_fn_dquant[2] = {
     oapv_dquant,
-        NULL
+    NULL
 };
 
-void oapv_adjust_itrans(int* src, int* dst, int itrans_diff_idx, int diff_step, int shift)
+void oapv_adjust_itrans(int *src, int *dst, int itrans_diff_idx, int diff_step, int shift)
 {
     int offset = 1 << (shift - 1);
-    for (int k = 0; k < 64; k++)
-    {
+    for(int k = 0; k < 64; k++) {
         dst[k] = src[k] + ((oapv_itrans_diff[itrans_diff_idx][k] * diff_step + offset) >> shift);
     }
 }
 
-const oapv_fn_itx_adj_t oapv_tbl_fn_itx_adj[2] =
-{
+const oapv_fn_itx_adj_t oapv_tbl_fn_itx_adj[2] = {
     oapv_adjust_itrans,
-        NULL,
+    NULL,
 };
-
