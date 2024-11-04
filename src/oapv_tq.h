@@ -34,18 +34,17 @@
 
 #include "oapv_def.h"
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // start of encoder code
 #if ENABLE_ENCODER
 ///////////////////////////////////////////////////////////////////////////////
 
-extern const oapv_fn_tx_t oapv_tbl_fn_tx[2];
+extern const oapv_fn_tx_t    oapv_tbl_fn_tx[2];
 extern const oapv_fn_quant_t oapv_tbl_fn_quant[2];
+extern const int             oapv_quant_scale[6];
 
-extern const int oapv_quant_scale[6];
-void oapv_trans(oapve_ctx_t* ctx, s16 * coef, int log2_w, int log2_h, int bit_depth);
-void oapv_itx_get_wo_sft(s16* src, s16* dst, s32* dst32, int shift, int line);
+void oapv_trans(oapve_ctx_t *ctx, s16 *coef, int log2_w, int log2_h, int bit_depth);
+void oapv_itx_get_wo_sft(s16 *src, s16 *dst, s32 *dst32, int shift, int line);
 
 ///////////////////////////////////////////////////////////////////////////////
 // end of encoder code
@@ -56,27 +55,26 @@ void oapv_itx_get_wo_sft(s16* src, s16* dst, s32* dst32, int shift, int line);
 // start of decoder code
 #if ENABLE_DECODER
 ///////////////////////////////////////////////////////////////////////////////
-#define ITX_SHIFT1                            (7)                     /* shift after 1st IT stage */
-#define ITX_SHIFT2(bit_depth)                 (12 - (bit_depth - 8))  /* shift after 2nd IT stage */
+#define ITX_SHIFT1            (7)                    /* shift after 1st IT stage */
+#define ITX_SHIFT2(bit_depth) (12 - (bit_depth - 8)) /* shift after 2nd IT stage */
 
 #define ITX_CLIP(x) \
-    (s16)(((x)<MIN_TX_VAL)? MIN_TX_VAL: (((x)>MAX_TX_VAL)? MAX_TX_VAL: (x)))
+    (s16)(((x) < MIN_TX_VAL) ? MIN_TX_VAL : (((x) > MAX_TX_VAL) ? MAX_TX_VAL : (x)))
 
-#define MAX_TX_DYNAMIC_RANGE_32                31
-#define MAX_TX_VAL_32                          2147483647
-#define MIN_TX_VAL_32                        (-2147483647-1)
+#define MAX_TX_DYNAMIC_RANGE_32 (31)
+#define MAX_TX_VAL_32           (2147483647)
+#define MIN_TX_VAL_32           (-2147483647 - 1)
 #define ITX_CLIP_32(x) \
-    (s32)(((x)<=MIN_TX_VAL_32)? MIN_TX_VAL_32: (((x)>=MAX_TX_VAL_32)? MAX_TX_VAL_32: (x)))
+    (s32)(((x) <= MIN_TX_VAL_32) ? MIN_TX_VAL_32 : (((x) >= MAX_TX_VAL_32) ? MAX_TX_VAL_32 : (x)))
 
 extern const oapv_fn_itx_part_t oapv_tbl_fn_itx_part[2];
-extern const oapv_fn_itx_t oapv_tbl_fn_itx[2];
-extern const oapv_fn_dquant_t oapv_tbl_fn_dquant[2];
-extern const oapv_fn_itx_adj_t oapv_tbl_fn_itx_adj[2];
+extern const oapv_fn_itx_t      oapv_tbl_fn_itx[2];
+extern const oapv_fn_dquant_t   oapv_tbl_fn_dquant[2];
+extern const oapv_fn_itx_adj_t  oapv_tbl_fn_itx_adj[2];
 
 ///////////////////////////////////////////////////////////////////////////////
 // end of decoder code
 #endif // ENABLE_DECODER
 ///////////////////////////////////////////////////////////////////////////////
-
 
 #endif /* _OAPV_TQ_H_ */

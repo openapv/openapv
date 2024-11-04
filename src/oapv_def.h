@@ -100,8 +100,7 @@ struct oapv_pbuh { // 4-byte
  * Frame info
  *****************************************************************************/
 typedef struct oapv_fi oapv_fi_t;
-struct oapv_fi // 112byte
-{
+struct oapv_fi {     // 112byte
     int profile_idc; /* u( 8) */
     int level_idc;   /* u( 8) */
     int band_idc;    /* u( 3) */
@@ -181,13 +180,8 @@ typedef void (*oapv_fn_itx_part_t)(s16 *coef, s16 *t, int shift, int line);
 typedef void (*oapv_fn_itx_t)(s16 *coef, int shift1, int shift2, int line);
 typedef void (*oapv_fn_tx_t)(s16 *coef, s16 *t, int shift, int line);
 typedef void (*oapv_fn_itx_adj_t)(int *src, int *dst, int itrans_diff_idx, int diff_step, int shift);
-typedef int (*oapv_fn_quant_t)(s16 *coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h,  int bit_depth, int deadzone_offset);
-// to-do: remove
-typedef int (*oapv_fn_quant_old_t)(s16 *coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h,
-                               u16 scale, int ch_type, int bit_depth, int deadzone_offset);
-typedef void (*oapv_fn_dquant_t)(s16* coef, s16 q_matrix[OAPV_BLK_D], int log2_w, int log2_h, s8 shift);
-// to-do: remove
-typedef void (*oapv_fn_dquant_old_t)(s16 *coef, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h, int scale, s8 shift);
+typedef int (*oapv_fn_quant_t)(s16 *coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h, int bit_depth, int deadzone_offset);
+typedef void (*oapv_fn_dquant_t)(s16 *coef, s16 q_matrix[OAPV_BLK_D], int log2_w, int log2_h, s8 shift);
 typedef int (*oapv_fn_sad_t)(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int bit_depth);
 typedef s64 (*oapv_fn_ssd_t)(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int bit_depth);
 typedef void (*oapv_fn_diff_t)(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int s_diff, s16 *diff, int bit_depth);
@@ -271,54 +265,54 @@ struct oapve_tile {
  * All have to be stored are in this structure.
  *****************************************************************************/
 struct oapve_ctx {
-    u32                      magic; // magic code
-    oapve_t                  id;    // identifier
-    oapve_cdesc_t            cdesc;
-    oapv_imgb_t             *imgb;
-    oapv_imgb_t             *rec;
+    u32                       magic; // magic code
+    oapve_t                   id;    // identifier
+    oapve_cdesc_t             cdesc;
+    oapv_imgb_t              *imgb;
+    oapv_imgb_t              *rec;
 
-    oapve_param_t           *param;
-    oapv_fh_t                fh;
-    oapve_tile_t             tile[OAPV_MAX_TILES];
-    int                      num_tiles;
-    int                      num_tile_cols;
-    int                      num_tile_rows;
-    int                      qp[N_C];
-    int                      w;
-    int                      h;
-    int                      cfi;
-    int                      num_comp;
-    int                      bit_depth;
-    int                      comp_sft[N_C][2];
-    int                      log2_block;
-    oapv_tpool_t            *tpool;
-    oapv_thread_t            thread_id[OAPV_MAX_THREADS];
-    oapv_sync_obj_t          sync_obj;
-    oapve_core_t            *core[OAPV_MAX_THREADS];
+    oapve_param_t            *param;
+    oapv_fh_t                 fh;
+    oapve_tile_t              tile[OAPV_MAX_TILES];
+    int                       num_tiles;
+    int                       num_tile_cols;
+    int                       num_tile_rows;
+    int                       qp[N_C];
+    int                       w;
+    int                       h;
+    int                       cfi;
+    int                       num_comp;
+    int                       bit_depth;
+    int                       comp_sft[N_C][2];
+    int                       log2_block;
+    oapv_tpool_t             *tpool;
+    oapv_thread_t             thread_id[OAPV_MAX_THREADS];
+    oapv_sync_obj_t           sync_obj;
+    oapve_core_t             *core[OAPV_MAX_THREADS];
 
-    oapv_bs_t                bs;
-    const oapv_fn_itx_part_t     *fn_itx_part;
-    const oapv_fn_itx_t     *fn_itx;
-    const oapv_fn_itx_adj_t *fn_itx_adj;
-    const oapv_fn_tx_t      *fn_txb;
-    const oapv_fn_quant_t   *fn_quant;
-    const oapv_fn_dquant_t  *fn_dquant;
-    const oapv_fn_sad_t     *fn_sad;
-    const oapv_fn_ssd_t     *fn_ssd;
-    const oapv_fn_diff_t    *fn_diff;
-    oapv_fn_imgb_to_block_rc fn_imgb_to_block_rc;
-    oapv_fn_imgb_to_block    fn_imgb_to_block[N_C];
-    oapv_fn_block_to_imgb    fn_block_to_imgb[N_C];
-    oapv_fn_img_pad          fn_img_pad;
-    oapv_fn_block_cost_t     fn_block;
-    oapv_fn_had8x8           fn_had8x8;
-    int                      use_frm_hash;
-    void                    *tx_tbl;
+    oapv_bs_t                 bs;
+    const oapv_fn_itx_part_t *fn_itx_part;
+    const oapv_fn_itx_t      *fn_itx;
+    const oapv_fn_itx_adj_t  *fn_itx_adj;
+    const oapv_fn_tx_t       *fn_txb;
+    const oapv_fn_quant_t    *fn_quant;
+    const oapv_fn_dquant_t   *fn_dquant;
+    const oapv_fn_sad_t      *fn_sad;
+    const oapv_fn_ssd_t      *fn_ssd;
+    const oapv_fn_diff_t     *fn_diff;
+    oapv_fn_imgb_to_block_rc  fn_imgb_to_block_rc;
+    oapv_fn_imgb_to_block     fn_imgb_to_block[N_C];
+    oapv_fn_block_to_imgb     fn_block_to_imgb[N_C];
+    oapv_fn_img_pad           fn_img_pad;
+    oapv_fn_block_cost_t      fn_block;
+    oapv_fn_had8x8            fn_had8x8;
+    int                       use_frm_hash;
+    void                     *tx_tbl;
 
-    oapve_rc_param_t         rc_param;
+    oapve_rc_param_t          rc_param;
 
     /* platform specific data, if needed */
-    void                    *pf;
+    void                     *pf;
 };
 ///////////////////////////////////////////////////////////////////////////////
 // end of encoder code
@@ -428,4 +422,3 @@ struct oapvd_ctx {
 #endif
 
 #endif /* _OAPV_DEF_H_4738294732894739280473892473829_ */
-

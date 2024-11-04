@@ -32,10 +32,10 @@
 #ifndef __OAPV_TPOOL_H__
 #define __OAPV_TPOOL_H__
 
-typedef void * oapv_thread_t;
-typedef int (* oapv_fn_thread_entry_t) (void * arg);
+typedef void *oapv_thread_t;
+typedef int (*oapv_fn_thread_entry_t)(void *arg);
 typedef struct oapv_tpool oapv_tpool_t;
-typedef void* oapv_sync_obj_t;
+typedef void *oapv_sync_obj_t;
 
 //  Salient points  ****************************************************
 //  Thread Controller object will create, run and destroy***************
@@ -44,48 +44,42 @@ typedef void* oapv_sync_obj_t;
 //  should be de-initialized to release handler functions***************
 //
 
-typedef enum
-{
+typedef enum {
     TPOOL_SUCCESS = 0,
     TPOOL_OUT_OF_MEMORY,
     TPOOL_INVALID_ARG,
     TPOOL_INVALID_STATE,
     TPOOL_UNKNOWN_ERROR
-
 } tpool_result_t;
 
-typedef enum
-{
+typedef enum {
     TPOOL_SUSPENDED = 0,
     TPOOL_RUNNING,
     TPOOL_TERMINATED
-
 } tpool_status_t;
 
-struct oapv_tpool
-{
-    //Handler function to create requested thread, thread created is in suspended state
-    oapv_thread_t (*create)(oapv_tpool_t * tp, int thread_id);
-    //Handler function to wake up suspended thread and assign task to complete
-    tpool_result_t (*run) (oapv_thread_t thread_id, oapv_fn_thread_entry_t entry, void * arg);
-    //Handler function to get result from the task assigned to the thread in consideration
-    tpool_result_t (*join)(oapv_thread_t thread_id, int * res);
-    //Handler function to terminate a thread in consideration
+struct oapv_tpool {
+    // Handler function to create requested thread, thread created is in suspended state
+    oapv_thread_t (*create)(oapv_tpool_t *tp, int thread_id);
+    // Handler function to wake up suspended thread and assign task to complete
+    tpool_result_t (*run)(oapv_thread_t thread_id, oapv_fn_thread_entry_t entry, void *arg);
+    // Handler function to get result from the task assigned to the thread in consideration
+    tpool_result_t (*join)(oapv_thread_t thread_id, int *res);
+    // Handler function to terminate a thread in consideration
     tpool_result_t (*release)(oapv_thread_t *thread_id);
-    //handle for mask number of allowed thread
+    // handle for mask number of allowed thread
     int max_task_cnt;
 };
 
-tpool_result_t oapv_tpool_init(oapv_tpool_t * tp, int maxtask);
-tpool_result_t oapv_tpool_deinit(oapv_tpool_t * tp);
+tpool_result_t oapv_tpool_init(oapv_tpool_t *tp, int maxtask);
+tpool_result_t oapv_tpool_deinit(oapv_tpool_t *tp);
 
 oapv_sync_obj_t oapv_tpool_sync_obj_create();
-tpool_result_t oapv_tpool_sync_obj_delete(oapv_sync_obj_t * sobj);
-int oapv_tpool_spinlock_wait(volatile int * addr, int val);
-void threadsafe_assign(volatile int * addr, int val);
+tpool_result_t oapv_tpool_sync_obj_delete(oapv_sync_obj_t *sobj);
+int oapv_tpool_spinlock_wait(volatile int *addr, int val);
+void threadsafe_assign(volatile int *addr, int val);
 
 void oapv_tpool_enter_cs(oapv_sync_obj_t sobj);
 void oapv_tpool_leave_cs(oapv_sync_obj_t sobj);
 
 #endif // __OAPV_TPOOL_H__
-

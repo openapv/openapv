@@ -302,70 +302,95 @@ const oapv_fn_itx_t oapv_tbl_fn_itx_avx[2] =
         NULL
 };
 
-static int oapv_quant_nnz_avx(s16 *coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h,
-                             u16 scale, int ch_type, int bit_depth, int deadzone_offset)
+__m256i mul_128i_to_256i_and_add(__m256i offset_vector, __m128i a, __m128i b)
 {
-    int nnz = 0;
-    s32 offset;
+    __m256i a_64 = _mm256_cvtepi32_epi64(a);
+    __m256i b_64 = _mm256_cvtepi32_epi64(b);
+    __m256i result = _mm256_mul_epi32(a_64, b_64);
+    result = _mm256_add_epi64(result, offset_vector);
+    return result;
+}
+
+static int oapv_quant_avx(s16* coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h, int bit_depth, int deadzone_offset)
+{
+    s64 offset;
     int shift;
     int tr_shift;
-    int log2_size = (log2_w + log2_h) >> 1;
 
+    int log2_size = (log2_w + log2_h) >> 1;
     tr_shift = MAX_TX_DYNAMIC_RANGE - bit_depth - log2_size;
     shift = QUANT_SHIFT + tr_shift + (qp / 6);
-    offset = deadzone_offset << (shift - 9);
-
-    __m256i offset_1 = _mm256_set1_epi32(offset);
+    offset = (s64)deadzone_offset << (shift - 9);
+    __m256i offset_vector = _mm256_set1_epi64x(offset);
 
     int pixels = (1 << (log2_w + log2_h));
     int i;
-    __m256i shuffle = _mm256_setr_epi8(
+    __m256i shuffle0 = _mm256_setr_epi32(1, 3, 5, 7, 0, 2, 4, 6);
+    __m256i shuffle1 = _mm256_setr_epi8(
         0, 1, 4, 5, 8, 9, 12, 13,
-        -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1,
-        0, 1, 4, 5, 8, 9, 12, 13 );
-
+        -128, -128, -128, -128, -128, -128, -128, -128,
+        -128, -128, -128, -128, -128, -128, -128, -128,
+        -128, -128, -128, -128, -128, -128, -128, -128);
+    __m256i shuffle2 = _mm256_setr_epi8(
+        -128, -128, -128, -128, -128, -128, -128, -128,
+        0, 1, 4, 5, 8, 9, 12, 13,
+        -128, -128, -128, -128, -128, -128, -128, -128,
+        -128, -128, -128, -128, -128, -128, -128, -128);
+    
     for (i = 0; i < pixels; i += 8)
     {
-        __m256i cur_q_matrix = _mm256_loadu_si256((__m256i *)(q_matrix + i));
-        __m128i coef_8_Val = _mm_loadu_si128((__m128i *)(coef + i));
-        __m256i coef_8_Val_act = _mm256_cvtepi16_epi32(coef_8_Val);
+        // Load first row
+        __m256i quant_matrix = _mm256_lddqu_si256((__m256i*)(q_matrix + i));
+        __m128i coef_row = _mm_lddqu_si128((__m128i*)(coef + i));
 
         // Extract sign
-        __m256i sign_mask = _mm256_srai_epi32(coef_8_Val_act, 31);
+        __m256i coef_row_cast = _mm256_castsi128_si256(coef_row);
+        __m256i sign_mask = _mm256_srai_epi16(coef_row_cast, 15);
 
-        __m256i coef_8_Val_abs = _mm256_abs_epi32(coef_8_Val_act);
+        // Convert to 32 bits and take abs()
+        __m256i coef_row_ext = _mm256_cvtepi16_epi32(coef_row);
+        __m256i coef_row_abs = _mm256_abs_epi32(coef_row_ext);
 
-        __m256i lev1 = _mm256_mullo_epi32(coef_8_Val_abs, cur_q_matrix);
-        __m256i lev2 = _mm256_add_epi32(lev1, offset_1);
-        __m256i lev3 = _mm256_srai_epi32(lev2, shift);
+        // Multiply coeff with quant values, add offset to result and shift
+        __m256i lev1_low = mul_128i_to_256i_and_add(offset_vector, _mm256_castsi256_si128(coef_row_abs), _mm256_castsi256_si128(quant_matrix));
+        __m256i lev1_high = mul_128i_to_256i_and_add(offset_vector, _mm256_extracti128_si256(coef_row_abs, 1), _mm256_extracti128_si256(quant_matrix, 1));
+        __m256i lev2_low = _mm256_srli_epi64(lev1_low, shift);
+        __m256i lev2_high = _mm256_srli_epi64(lev1_high, shift);
 
-        // apply sign
-        __m256i levx = _mm256_sub_epi32(_mm256_xor_si256(lev3, sign_mask), sign_mask);
+        // First level of combination
+        lev2_low = _mm256_slli_epi64(lev2_low, 32);
+        __m256i combined = _mm256_or_si256(lev2_low, lev2_high);
 
-        // convert to 16bit
-        levx = _mm256_shuffle_epi8( levx, shuffle );
-        __m128i low = _mm256_castsi256_si128( levx );
-        __m128i high = _mm256_extracti128_si256( levx, 1 );
-        __m128i lev4 = _mm_or_si128( low, high );
+        // Second level of combination
+        __m256i levx = _mm256_permutevar8x32_epi32(combined, shuffle0);
+        __m128i levx_low = _mm256_castsi256_si128(levx);
+        __m256i levx_low_ext = _mm256_castsi128_si256(levx_low);
+        levx_low_ext = _mm256_shuffle_epi8(levx_low_ext, shuffle1);
+        __m128i levx_high = _mm256_extracti128_si256(levx, 1);
+        __m256i levx_high_ext = _mm256_castsi128_si256(levx_high);
+        levx_high_ext = _mm256_shuffle_epi8(levx_high_ext, shuffle2);
+        levx = _mm256_or_si256(levx_high_ext, levx_low_ext);
 
+        // Apply sign
+        levx = _mm256_sub_epi16(_mm256_xor_si256(levx, sign_mask), sign_mask);
 
+        // Clip and store in coef
+        __m128i lev4 = _mm256_castsi256_si128(levx);
         __m128i lev5 = _mm_max_epi16(lev4, _mm_set1_epi16(-32768));
         __m128i lev6 = _mm_min_epi16(lev5, _mm_set1_epi16(32767));
-
-        _mm_storeu_si128((__m128i *)(coef + i), lev6);
+        _mm_storeu_si128((__m128i*)(coef + i), lev6);
     }
-    return nnz;
+    return OAPV_OK;
 }
 
-const oapv_fn_quant_old_t oapv_tbl_quant_avx[2] =
+const oapv_fn_quant_t oapv_tbl_fn_quant_avx[2] =
 {
-    oapv_quant_nnz_avx,
+    oapv_quant_avx,
         NULL
 };
 
 
-static void oapv_dquant_avx(s16 *coef, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h, int scale, s8 shift)
+static void oapv_dquant_avx(s16 *coef, s16 q_matrix[OAPV_BLK_D], int log2_w, int log2_h, s8 shift)
 {
     int i;
     int pixels = (1 << (log2_w + log2_h));
@@ -423,7 +448,7 @@ static void oapv_dquant_avx(s16 *coef, int q_matrix[OAPV_BLK_D], int log2_w, int
         }
     }
 }
-const oapv_fn_dquant_old_t oapv_tbl_fn_dquant_avx[2] =
+const oapv_fn_dquant_t oapv_tbl_fn_dquant_avx[2] =
     {
         oapv_dquant_avx,
             NULL,

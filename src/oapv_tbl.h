@@ -34,12 +34,11 @@
 
 #include "oapv_def.h"
 
-extern const u8   oapv_tbl_log2[257];
-extern const s8   oapv_tbl_tm8[8][8];
-extern const int  oapv_tbl_dq_scale[6];
+extern const u8  oapv_tbl_log2[257];
+extern const s8  oapv_tbl_tm8[8][8];
+extern const int oapv_tbl_dq_scale[6];
 extern const u16 oapv_tbl_scan[OAPV_BLK_D];
 extern const u32 CODE_LUT_100[100][5][2];
+extern int       oapv_itrans_diff[64][64];
 
-extern int oapv_itrans_diff[64][64];
 #endif /* _OAPV_TBL_H_ */
-

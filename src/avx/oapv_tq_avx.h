@@ -130,10 +130,10 @@
 
 #if X86_SSE
 extern const oapv_fn_tx_t oapv_tbl_fn_txb_avx[2];
-extern const oapv_fn_quant_old_t oapv_tbl_fn_quant_avx[2];
+extern const oapv_fn_quant_t oapv_tbl_fn_quant_avx[2];
 extern const oapv_fn_itx_part_t oapv_tbl_fn_itx_part_avx[2];
 extern const oapv_fn_itx_t oapv_tbl_fn_itx_avx[2];
-extern const oapv_fn_dquant_old_t oapv_tbl_fn_dquant_avx[2];
+extern const oapv_fn_dquant_t oapv_tbl_fn_dquant_avx[2];
 extern const oapv_fn_itx_adj_t oapv_tbl_fn_itx_adj_avx[2];
 #endif /* X86_SSE */
 

@@ -37,79 +37,76 @@
 typedef struct oapv_bs oapv_bs_t;
 typedef int (*oapv_bs_fn_flush_t)(oapv_bs_t *bs, int byte);
 
-struct oapv_bs
-{
-    u32 code; // intermediate code buffer
-    int leftbits; // left bits count in code
-    u8* cur; // address of current bitstream position
-    u8* end; // address of bitstream end
-    u8* beg; // address of bitstream begin
-    u32 size; // size of input bitstream in byte
+struct oapv_bs {
+    u32                code;     // intermediate code buffer
+    int                leftbits; // left bits count in code
+    u8                *cur;      // address of current bitstream position
+    u8                *end;      // address of bitstream end
+    u8                *beg;      // address of bitstream begin
+    u32                size;     // size of input bitstream in byte
     oapv_bs_fn_flush_t fn_flush; // function pointer for flush operation
-    int ndata[4]; // arbitrary data, if needs
-    void* pdata[4]; // arbitrary address, if needs
-    char is_bin_count;
-    u32  bin_count;
+    int                ndata[4]; // arbitrary data, if needs
+    void              *pdata[4]; // arbitrary address, if needs
+    char               is_bin_count;
+    u32                bin_count;
 };
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // start of encoder code
 #if ENABLE_ENCODER
 ///////////////////////////////////////////////////////////////////////////////
 
-static inline bool bsw_is_align8(oapv_bs_t* bs)
+static inline bool bsw_is_align8(oapv_bs_t *bs)
 {
     return (bool)(!((bs)->leftbits & 0x7));
 }
 
-static inline int bsw_get_write_byte(oapv_bs_t* bs)
+static inline int bsw_get_write_byte(oapv_bs_t *bs)
 {
-    return (int)((u8*)(bs->cur) - (u8*)(bs->beg));
+    return (int)((u8 *)(bs->cur) - (u8 *)(bs->beg));
 }
 
-void oapv_bsw_init(oapv_bs_t * bs, u8 * buf, int size, oapv_bs_fn_flush_t fn_flush);
-void oapv_bsw_deinit(oapv_bs_t * bs);
-void* oapv_bsw_sink(oapv_bs_t* bs);
-int oapv_bsw_write_direct(void * bits, u32 val, int len);
-int oapv_bsw_write1(oapv_bs_t * bs, int val);
-int oapv_bsw_write(oapv_bs_t * bs, u32 val, int len);
+void oapv_bsw_init(oapv_bs_t *bs, u8 *buf, int size, oapv_bs_fn_flush_t fn_flush);
+void oapv_bsw_deinit(oapv_bs_t *bs);
+void *oapv_bsw_sink(oapv_bs_t *bs);
+int oapv_bsw_write_direct(void *bits, u32 val, int len);
+int oapv_bsw_write1(oapv_bs_t *bs, int val);
+int oapv_bsw_write(oapv_bs_t *bs, u32 val, int len);
 ///////////////////////////////////////////////////////////////////////////////
 // end of encoder code
 #endif // ENABLE_ENCODER
 ///////////////////////////////////////////////////////////////////////////////
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // start of decoder code
 #if ENABLE_DECODER
 ///////////////////////////////////////////////////////////////////////////////
 /*! is bitstream byte aligned? */
-static bool inline bsr_is_align8(oapv_bs_t* bs)
+static bool inline bsr_is_align8(oapv_bs_t *bs)
 {
-    return ((bs->leftbits & 0x7) == 0) ? true: false;
+    return ((bs->leftbits & 0x7) == 0) ? true : false;
 }
 
 /* get number of byte consumed */
-static int inline bsr_get_read_byte(oapv_bs_t* bs)
+static int inline bsr_get_read_byte(oapv_bs_t *bs)
 {
     return ((int)((bs)->cur - (bs)->beg) - ((bs)->leftbits >> 3));
 }
 
-static int inline bsr_get_remained_byte(oapv_bs_t* bs)
+static int inline bsr_get_remained_byte(oapv_bs_t *bs)
 {
     return (bs->size - bsr_get_read_byte(bs));
 }
 
-void oapv_bsr_init(oapv_bs_t * bs, u8 * buf, int size, oapv_bs_fn_flush_t fn_flush);
+void oapv_bsr_init(oapv_bs_t *bs, u8 *buf, int size, oapv_bs_fn_flush_t fn_flush);
 int oapv_bsr_clz_in_code(u32 code);
-void oapv_bsr_align8(oapv_bs_t* bs);
-void oapv_bsr_skip(oapv_bs_t* bs, int size);
-void oapv_bsr_peek(oapv_bs_t* bs, u32 * val, int size);
-void* oapv_bsr_sink(oapv_bs_t* bs);
-void oapv_bsr_move(oapv_bs_t* bs, u8* pos);
-u32 oapv_bsr_read(oapv_bs_t * bs, int size);
-int oapv_bsr_read1(oapv_bs_t * bs);
+void oapv_bsr_align8(oapv_bs_t *bs);
+void oapv_bsr_skip(oapv_bs_t *bs, int size);
+void oapv_bsr_peek(oapv_bs_t *bs, u32 *val, int size);
+void *oapv_bsr_sink(oapv_bs_t *bs);
+void oapv_bsr_move(oapv_bs_t *bs, u8 *pos);
+u32 oapv_bsr_read(oapv_bs_t *bs, int size);
+int oapv_bsr_read1(oapv_bs_t *bs);
 
 ///////////////////////////////////////////////////////////////////////////////
 // end of decoder code
@@ -117,4 +114,3 @@ int oapv_bsr_read1(oapv_bs_t * bs);
 ///////////////////////////////////////////////////////////////////////////////
 
 #endif /* _OAPV_BSR_H_ */
-
