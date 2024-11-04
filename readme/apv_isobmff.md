@@ -68,7 +68,7 @@ aligned(8) class APVDecoderConfigurationBox extends FullBox('apvC',version=0, fl
       unsigned int(8) number_of_frame_info[i];
       for (j=0; j<number_of_frame_info[i]; j++) {
          reserved_zero_6bits;
-         unsigned int(1) color_description_present_flag_info[i][j];
+         unsigned int(1) color_description_present_flag[i][j];
          unsigned int(1) capture_time_distance_ignored[i][j];
          unsigned int(8) profile_idc[i][j];
          unsigned int(8) level_idc[i][j];
@@ -78,10 +78,10 @@ aligned(8) class APVDecoderConfigurationBox extends FullBox('apvC',version=0, fl
          unsigned int(4) chroma_format_idc[i][j];
          unsigned int(4) bit_depth_minus8[i][j];
          unsigned int(8) capture_time_distance[i][j];
-         if (color_description_present_flag_info[i][j]) {
-            unsigned int(8) color_primaries_info[i][j];
-            unsigned int(8) transfer_characteristics_info[i][j];
-            unsigned int(8) matrix_coefficients_info[i][j];
+         if (color_description_present_flag[i][j]) {
+            unsigned int(8) color_primaries[i][j];
+            unsigned int(8) transfer_characteristics[i][j];
+            unsigned int(8) matrix_coefficients[i][j];
          }
       }
    }
@@ -101,7 +101,7 @@ aligned(8) class APVDecoderConfigurationBox extends FullBox('apvC',version=0, fl
 
    > indicates the number of variations of the frame header information for the frames whose value of the pbu_type field in the pbu header immediately preceding it is idendtical with the value of the pub_type[i] field for a certain index i.
 
-+ color_description_present_flag_info[i][j] 
++ color_description_present_flag[i][j] 
    >indicates the information to be used to calculate the value of the color_description_present_flag field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. The same value of this field must be used as the value of the color_description_present_flag in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
 + capture_time_distance_ignored[i][j] 
@@ -131,13 +131,13 @@ aligned(8) class APVDecoderConfigurationBox extends FullBox('apvC',version=0, fl
 + capture_time_distance[i][j]
    > indicates the value of the capture_time_distance field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the capture_time_distance field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of capture_time_distance value matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
-+ color_primaries_info[i][j] 
++ color_primaries[i][j] 
    > indicates the information to be used to calculate the value of the color_primaries field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. The same value of this field must be used as the value of the color_primaries in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
-+ transfer_characteristics_info[i][j] 
++ transfer_characteristics[i][j] 
    > indicates the information to be used to calculate the value of the transfer_characteristics field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. The same value of this field must be used as the value of the transfer_characteristics in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
-+ matrix_coefficients_info[i][j]
++ matrix_coefficients[i][j]
    > indicates the information to be used to calculate the value of the matrix_coefficients field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. The same value of this field must be used as the value of the matrix_coefficients in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
 ## APV Sample Description 
