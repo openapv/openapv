@@ -121,8 +121,8 @@ static int meta_md_rm_usd(oapv_md_t *md, unsigned char *uuid)
                 else {
                     mdp_prev->next = mdp->next;
                 }
+                oapv_assert_rv(md->md_size >= mdp->pld_size, OAPV_ERR_UNEXPECTED);
                 md->md_size -= mdp->pld_size;
-                oapv_assert_rv(md->md_size >= 0, OAPV_ERR_UNEXPECTED);
                 meta_md_free_mdp(mdp);
                 md->md_num--;
                 return OAPV_OK;
@@ -235,17 +235,17 @@ int oapvm_set(oapvm_t mid, int group_id, int type, void *data, int size, unsigne
     int tmp_mpt = type;
     while(tmp_mpt >= 255) {
         tmp_mpt -= 255;
-        md_list->md_arr[md_list_idx].md_size += 8;
+        md_list->md_arr[md_list_idx].md_size += 1;
     }
-    md_list->md_arr[md_list_idx].md_size += 8;
+    md_list->md_arr[md_list_idx].md_size += 1;
 
     /*  calculate length of payload data size */
     int tmp_mps = size;
     while(tmp_mps >= 255) {
         tmp_mps -= 255;
-        md_list->md_arr[md_list_idx].md_size += 8;
+        md_list->md_arr[md_list_idx].md_size += 1;
     }
-    md_list->md_arr[md_list_idx].md_size += 8;
+    md_list->md_arr[md_list_idx].md_size += 1;
 
     md_list->md_arr[md_list_idx].md_size += tmp_mdp->pld_size;
     md_list->md_arr[md_list_idx].md_num++;
@@ -327,7 +327,6 @@ int oapvm_set_all(oapvm_t mid, oapvm_payload_t *pld, int num_plds)
     return OAPV_OK;
 
 ERR:
-    // TO-DO: free allocated memory
     return ret;
 }
 
@@ -337,7 +336,7 @@ int oapvm_get_all(oapvm_t mid, oapvm_payload_t *pld, int *num_plds)
     if(pld == NULL) {
         int num_payload = 0;
         for(int i = 0; i < md_list->num; i++) {
-            num_payload += md_list[i].md_arr->md_num;
+            num_payload += md_list->md_arr[i].md_num;
         }
         *num_plds = num_payload;
         return OAPV_OK;

@@ -32,11 +32,6 @@
 #include "oapv_sad_avx.h"
 
 #if X86_SSE
-const oapv_fn_sad_t oapv_tbl_fn_sad_16b_avx[2] =
-{
-    oapv_sad_16b_sse_8x2n,
-        NULL
-};
 
 static s64 ssd_16b_sse_8x8_avx(int w, int h, void* src1, void* src2, int s_src1, int s_src2, int bit_depth)
 {

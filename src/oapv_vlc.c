@@ -736,6 +736,7 @@ static int dec_vlc_tile_info(oapv_bs_t *bs, oapv_fh_t *fh)
     tile_h = fh->tile_height_in_mbs * OAPV_MB_H;
     tile_cols = (pic_w + (tile_w - 1)) / tile_w;
     tile_rows = (pic_h + (tile_h - 1)) / tile_h;
+    oapv_assert_rv(tile_cols <= OAPV_MAX_TILE_COLS && tile_rows <= OAPV_MAX_TILE_ROWS, OAPV_ERR_MALFORMED_BITSTREAM)
 
     fh->tile_size_present_in_fh_flag = oapv_bsr_read1(bs);
     DUMP_HLS(fh->tile_size_present_in_fh_flag, fh->tile_size_present_in_fh_flag);
@@ -831,6 +832,7 @@ int oapvd_vlc_tile_header(oapv_bs_t *bs, oapvd_ctx_t *ctx, oapv_th_t *th)
     /* byte align */
     oapv_bsr_align8(bs);
 
+    oapv_assert_rv(th->reserved_zero_8bits == 0, OAPV_ERR_MALFORMED_BITSTREAM);
     return OAPV_OK;
 }
 
@@ -1192,7 +1194,8 @@ int oapvd_vlc_ac_coeff(oapvd_ctx_t *ctx, oapvd_core_t *core, oapv_bs_t *bs, s16 
             run = dec_vlc_read(bs, rice_run);
         }
 
-        for(i = scan_pos_offset; i < scan_pos_offset + run; i++) {
+        oapv_assert_rv((scan_pos_offset + run) <= 64, OAPV_ERR_MALFORMED_BITSTREAM);
+        for (i = scan_pos_offset; i < scan_pos_offset + run; i++){
             coef[scanp[i]] = 0;
         }
 
@@ -1274,17 +1277,17 @@ int oapvd_vlc_metadata(oapv_bs_t *bs, u32 pbu_size, oapvm_t mid, int group_id)
     u32 t0;
     u32 metadata_size;
     metadata_size = oapv_bsr_read(bs, 32);
-    DUMP_HLS(metadata_size, metadata_size);
+    DUMP_HLS(metadata_size, (metadata_size - 32));
+    oapv_assert_gv(metadata_size <= (pbu_size - 8), ret, OAPV_ERR_MALFORMED_BITSTREAM, ERR);
     u8 *bs_start_pos = bs->cur;
     u8 *payload_data = NULL;
     while(metadata_size > 0) {
         u32 payload_type = 0, payload_size = 0;
-
         t0 = 0;
         do {
             t0 = oapv_bsr_read(bs, 8);
             DUMP_HLS(payload_type, t0);
-            metadata_size -= 8;
+            metadata_size -= 1;
             if(t0 == 0xFF) {
                 payload_type += 255;
             }
@@ -1295,12 +1298,13 @@ int oapvd_vlc_metadata(oapv_bs_t *bs, u32 pbu_size, oapvm_t mid, int group_id)
         do {
             t0 = oapv_bsr_read(bs, 8);
             DUMP_HLS(payload_size, t0);
-            metadata_size -= 8;
+            metadata_size -= 1;
             if(t0 == 0xFF) {
                 payload_size += 255;
             }
         } while(t0 == 0xFF);
         payload_size += t0;
+        oapv_assert_gv(payload_size <= metadata_size, ret, OAPV_ERR_MALFORMED_BITSTREAM, ERR);
 
         if(payload_size > 0) {
 
@@ -1325,7 +1329,6 @@ int oapvd_vlc_metadata(oapv_bs_t *bs, u32 pbu_size, oapvm_t mid, int group_id)
         ret = oapvm_set(mid, group_id, payload_type, payload_data, payload_size,
                         payload_type == OAPV_METADATA_USER_DEFINED ? payload_data : NULL);
         oapv_assert_g(OAPV_SUCCEEDED(ret), ERR);
-        oapv_assert_gv((metadata_size - payload_size) >= 0, ret, OAPV_ERR_MALFORMED_BITSTREAM, ERR);
         metadata_size -= payload_size;
     }
     const u32 target_read_size = (pbu_size - 8);

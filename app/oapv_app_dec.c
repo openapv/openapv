@@ -195,12 +195,12 @@ static int read_bitstream(FILE *fp, unsigned char *bs_buf, int *bs_buf_size)
             if(feof(fp)) {
                 logv2_line("");
                 logv2("End of file\n");
+                return 0;
             }
             else {
                 logerr("Cannot read bitstream size!\n")
+                return -1;
             };
-
-            return -1;
         }
     }
     else {
@@ -484,9 +484,14 @@ int main(int argc, const char **argv)
     /* decoding loop */
     while(args_var->max_au == 0 || (au_cnt < args_var->max_au)) {
         read_size = read_bitstream(fp_bs, bs_buf, &bs_buf_size);
-        if(read_size <= 0) {
-            logv3("--> end of bitstream or reading error\n");
+        if (read_size == 0) {
+            logv3("--> end of bitstream\n")
             break;
+        }
+        if (read_size < 0) {
+            logv3("--> bitstream reading error\n")
+            ret = -1;
+            goto ERR;
         }
 
         if(OAPV_FAILED(oapvd_info(bs_buf, bs_buf_size, &aui))) {
@@ -546,6 +551,7 @@ int main(int argc, const char **argv)
         if(stat.read != bs_buf_size) {
             logerr("\t=> different reading of bitstream (in:%d, read:%d)\n",
                    bs_buf_size, stat.read);
+            continue;
         }
 
         /* testing of metadata reading */
