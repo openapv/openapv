@@ -50,14 +50,14 @@ int  oapve_vlc_pbu_size(oapv_bs_t* bs, int pbu_size);
 void oapve_vlc_ac_coeff(oapve_ctx_t* ctx, oapve_core_t* core, oapv_bs_t* bs, s16* coef, int num_sig, int ch_type);
 int  oapve_vlc_dc_coeff(oapve_ctx_t* ctx, oapve_core_t* core, oapv_bs_t* bs, int dc_diff, int c);
 
-int  oapvd_vlc_au_size(oapv_bs_t* bs);
-int  oapvd_vlc_pbu_size(oapv_bs_t* bs);
+int  oapvd_vlc_au_size(oapv_bs_t *bs, u32 *au_size);
+int  oapvd_vlc_pbu_size(oapv_bs_t* bs, u32 *pbu_size);
 int  oapvd_vlc_pbu_header(oapv_bs_t* bs, oapv_pbuh_t* pbuh);
 int  oapvd_vlc_au_info(oapv_bs_t* bs, oapv_aui_t* aui);
 
 int  oapvd_vlc_frame_header(oapv_bs_t* bs, oapv_fh_t* fh);
 int  oapvd_vlc_frame_info(oapv_bs_t* bs, oapv_fi_t *fi);
-int  oapvd_vlc_tile_size(oapv_bs_t* bs);
+int  oapvd_vlc_tile_size(oapv_bs_t *bs, u32 *tile_size);
 int  oapvd_vlc_tile_header(oapv_bs_t* bs, oapvd_ctx_t* ctx, oapv_th_t* th);
 int  oapvd_vlc_tile_dummy_data(oapv_bs_t* bs);
 int  oapvd_vlc_metadata(oapv_bs_t* bs, u32 pbu_size, oapvm_t mid, int group_id);

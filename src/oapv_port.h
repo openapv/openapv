@@ -127,44 +127,39 @@ void oapv_trace_line(char *pre);
     {}
 #endif
 #if defined(__GNUC__)
-#define oapv_print(args...) oapv_trace0(NULL, -1, args)
+#define oapv_print(args, ...) oapv_trace0(NULL, -1, args)
 #else
 #define oapv_print(args, ...) oapv_trace0(NULL, -1, args, __VA_ARGS__)
 #endif
 
 /* assert function */
 #include <assert.h>
-#define oapv_assert(x) \
-    {                  \
-        if(!(x)) {     \
-            assert(x); \
-        }              \
-    }
-#define oapv_assert_r(x) \
-    {                    \
-        if(!(x)) {       \
-            assert(x);   \
-            return;      \
-        }                \
+#define oapv_assert(x) assert(x)
+#define oapv_assert_r(x)     \
+    {                        \
+        if(!(x)) {           \
+            oapv_assert(x);  \
+            return;          \
+        }                    \
     }
 #define oapv_assert_rv(x, r) \
     {                        \
         if(!(x)) {           \
-            assert(x);       \
+            oapv_assert(x);  \
             return (r);      \
         }                    \
     }
-#define oapv_assert_g(x, g) \
-    {                       \
-        if(!(x)) {          \
-            assert(x);      \
-            goto g;         \
-        }                   \
+#define oapv_assert_g(x, g)  \
+    {                        \
+        if(!(x)) {           \
+            oapv_assert(x);  \
+            goto g;          \
+        }                    \
     }
 #define oapv_assert_gv(x, r, v, g) \
     {                              \
         if(!(x)) {                 \
-            assert(x);             \
+            oapv_assert(x);        \
             (r) = (v);             \
             goto g;                \
         }                          \
@@ -187,6 +182,10 @@ void oapv_trace_line(char *pre);
 #else
 #include <x86intrin.h>
 #endif
+#endif
+
+#if ARM_NEON
+#include <arm_neon.h>
 #endif
 
 /* Buffer Alignement */

@@ -405,11 +405,10 @@ static void oapv_dquant_avx(s16 *coef, s16 q_matrix[OAPV_BLK_D], int log2_w, int
         __m256i offset_1 = _mm256_set1_epi32(offset);
         for (i = 0; i < pixels; i += 8)
         {
-            __m256i cur_q_matrix = _mm256_loadu_si256((__m256i *)(q_matrix + i));
-            __m128i coef_8_Val = _mm_loadu_si128((__m128i *)(coef + i));
-            __m256i coef_8_Val_act = _mm256_cvtepi16_epi32(coef_8_Val);
+            __m256i cur_q_matrix = _mm256_cvtepi16_epi32(_mm_loadu_si128((__m128i*)(q_matrix + i)));
+            __m256i coef_8_val_act = _mm256_cvtepi16_epi32(_mm_loadu_si128((__m128i*)(coef + i)));
 
-            __m256i lev1 = _mm256_mullo_epi32(coef_8_Val_act, cur_q_matrix);
+            __m256i lev1 = _mm256_mullo_epi32(coef_8_val_act, cur_q_matrix);
             __m256i lev2 = _mm256_add_epi32(lev1, offset_1);
             __m256i lev3 = _mm256_srai_epi32(lev2, shift);
 
@@ -429,11 +428,10 @@ static void oapv_dquant_avx(s16 *coef, s16 q_matrix[OAPV_BLK_D], int log2_w, int
         int left_shift = -shift;
         for (i = 0; i < pixels; i += 8)
         {
-            __m256i cur_q_matrix = _mm256_loadu_si256((__m256i *)(q_matrix + i));
-            __m128i coef_8_Val = _mm_loadu_si128((__m128i *)(coef + i));
-            __m256i coef_8_Val_act = _mm256_cvtepi16_epi32(coef_8_Val);
+            __m256i cur_q_matrix = _mm256_cvtepi16_epi32(_mm_loadu_si128((__m128i*)(q_matrix + i)));
+            __m256i coef_8_val_act = _mm256_cvtepi16_epi32(_mm_loadu_si128((__m128i*)(coef + i)));
 
-            __m256i lev1 = _mm256_mullo_epi32(coef_8_Val_act, cur_q_matrix);
+            __m256i lev1 = _mm256_mullo_epi32(coef_8_val_act, cur_q_matrix);
             __m256i lev3 = _mm256_slli_epi32(lev1, left_shift);
 
             lev3 = _mm256_shuffle_epi8( lev3, shuffle );
