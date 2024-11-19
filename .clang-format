@@ -1,0 +1,61 @@
+# .clang-format
+
+# Base style to use
+#BasedOnStyle: Google
+
+# Indentation settings
+IndentWidth: 4
+UseTab: Never
+
+Cpp11BracedListStyle: false
+PointerAlignment: Right
+
+AlignConsecutiveDeclarations:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+  AlignFunctionPointers: false
+
+AlignConsecutiveAssignments:
+  Enabled: false
+  AcrossEmptyLines: true
+  AcrossComments: true
+
+AlignConsecutiveMacros:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+
+AlignTrailingComments: true
+
+# Break settings
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterEnum: false
+  AfterStruct: false
+  SplitEmptyFunction: false
+  AfterFunction: true
+  BeforeElse: true
+
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
+# Space settings
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: false
+  AfterFunctionDefinitionName: false
+
+SpaceAfterCStyleCast: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# Comment settings
+CommentPragmas: Preserve
+SortIncludes: Never
+
+# Other settings
+ColumnLimit: 0  # Disable column limit

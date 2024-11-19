@@ -1,15 +1,15 @@
-ISOBMFF binding for APV 
+ISOBMFF binding for APV
 ==============
 
-# Introduction         
+# Introduction
 
 This document specifies methods to store data encoded with Advanced Professional Video (APV) codec in ISO Base Media File Format (ISOBMFF) files. APV is a mezzanine video codec for storage, exchange and editing of professional quality video. To support extensive, repeated editing including multiple rounds of decompression and compression all the necessary information for decoding, frame header and metadata for processing of decoded video and presentation are put together for fast and simple access. For example, frame header data are repeated in each frame even if the information in frame header are exactly identical for series of frames. When APV bitstream is stored in a file, to avoid such inefficiency codec configuration box indicates whether header information is identical to entire frames stored in a track. In this file format, for efficient access of portions of a frame, a method to identify the location of tiles are supported.
 
-# ISOBMFF binding for APV        
+# ISOBMFF binding for APV
 
-## APV Sample Entry 		
+## APV Sample Entry
 
-### Definition 
+### Definition
 
 + Sample Entry Type: apv1
 
@@ -19,28 +19,28 @@ This document specifies methods to store data encoded with Advanced Professional
 
 + Quantity: One or more
 
-### Description  		
+### Description
 
 The sample entry with APV1SampleEntry type specifies that the track contains APV coded video data samples. This type of sample entry shall use APVCodecConfiguraionBox.
 
 
-### Syntax 		
+### Syntax
 
 class APV1SmapleEntry extends VisualSampleEntry('apv1'){
 	APVCodecConfigurationBox	config;
 }
 
-### Semantics  		
+### Semantics
 
-The value of largest_frame_width_minus1 + 1 and largest_frame_height_minus1 + 1 of the APVCodecConfigurationBox shall be used for the value of width and height fields of the VisualSampleEntry, respectively. 
+The value of largest_frame_width_minus1 + 1 and largest_frame_height_minus1 + 1 of the APVCodecConfigurationBox shall be used for the value of width and height fields of the VisualSampleEntry, respectively.
 
 When the sample entry name is 'apv1', the stream to which this sample entry applies shall be a compliant APV stream as viewed by an APV decoder operating under the configuration (including profile, level, and so on) given in the APVCodecConfigurationBox.
 
 The compressorname field of the VisualSampleEntry shall have '\012APV Coding'. The sample entry with APV1SampleEntry type specifies that the track contains APV coded video data samples. This type of sample entry shall use APVCodecConfiguraionBox.
 
-## APV Codec Configuration Box 
+## APV Codec Configuration Box
 
-### Definition  		
+### Definition
 
 + Box Type: apvC
 
@@ -50,14 +50,14 @@ The compressorname field of the VisualSampleEntry shall have '\012APV Coding'. T
 
 + Quantity: Exactly One
 
-### Description 
+### Description
 
-The box with APVCodecConfigurationBox shall contains information for initial configuration of a decoder which consumes the samples references the sample entry type of apv1. 
+The box with APVCodecConfigurationBox shall contains information for initial configuration of a decoder which consumes the samples references the sample entry type of apv1.
 
 All variation of information required to decide appropriate resource for decoding, e.g. the profiles a decoder compliant to, are carried so that the client can decide whether it has appropriate resources to completely decode the AUs in that track.
 
 
-### Syntax 	
+### Syntax
 
 ~~~~
 aligned(8) class APVDecoderConfigurationBox extends FullBox('apvC',version=0, flags) {
@@ -88,39 +88,39 @@ aligned(8) class APVDecoderConfigurationBox extends FullBox('apvC',version=0, fl
 }
 ~~~~
 
-### Semantics  		
+### Semantics
 
-+ number_of_configuration_entry 
-    > indicates the number of frame header information for a specific PBU types are stored. 
++ number_of_configuration_entry
+    > indicates the number of frame header information for a specific PBU types are stored.
 
-+ pbu_type[i] 
++ pbu_type[i]
 
    > indicates the value of the pbu_type field in the pbu header immediately preceding the frame data for a certain index i.
 
-+ number_of_frame_info[i] 
++ number_of_frame_info[i]
 
    > indicates the number of variations of the frame header information for the frames whose value of the pbu_type field in the pbu header immediately preceding it is idendtical with the value of the pub_type[i] field for a certain index i.
 
-+ color_description_present_flag[i][j] 
++ color_description_present_flag[i][j]
    >indicates whether the color description information is provided for the jth variation of frame header whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
-+ capture_time_distance_ignored[i][j] 
-   > indicates whether the value of the capture_time_distance field in the jth variation of frame header is used for the processing of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.  
++ capture_time_distance_ignored[i][j]
+   > indicates whether the value of the capture_time_distance field in the jth variation of frame header is used for the processing of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
 + profile_idc[i][j]
-   > indicates the value of the profile_idc field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the profile_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of profile_idc field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. 
+   > indicates the value of the profile_idc field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the profile_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of profile_idc field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
 + level_idc[i][j]
-   > indicates the value of the level_idc field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the level_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of level_idc field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. 
+   > indicates the value of the level_idc field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the level_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of level_idc field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
 + band_idc[i][j]
-   > indicates the value of the band_idc field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the band_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of band_idc field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.  
+   > indicates the value of the band_idc field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the band_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of band_idc field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
 + frame_width_minus1[i][j]
-   > indicates the value of the frame_width_minus1 field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the frame_width_minus1 field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of frame_width_minus1 field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. 
+   > indicates the value of the frame_width_minus1 field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the frame_width_minus1 field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of frame_width_minus1 field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
 + frame_height_minus1[i][j]
-   > indicates the value of the frame_height_minus1 field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the frame_height_minus1 field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of frame_height_minus1 field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. 
+   > indicates the value of the frame_height_minus1 field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the frame_height_minus1 field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of frame_height_minus1 field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
 + chroma_format_idc[i][j]
    > indicates the value of the chroma_format_idc field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the chroma_format_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of chroma_format_idc field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
@@ -131,24 +131,24 @@ aligned(8) class APVDecoderConfigurationBox extends FullBox('apvC',version=0, fl
 + capture_time_distance[i][j]
    > indicates the value of the capture_time_distance field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the capture_time_distance field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of capture_time_distance field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
-+ color_primaries[i][j] 
- > indicates the value of the color_primaries field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the profile_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of color_primaries field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. 
++ color_primaries[i][j]
+ > indicates the value of the color_primaries field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the profile_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of color_primaries field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
-+ transfer_characteristics[i][j] 
- > indicates the value of the transfer_characteristics field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the profile_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of transfer_characteristics field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.  
++ transfer_characteristics[i][j]
+ > indicates the value of the transfer_characteristics field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the profile_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of transfer_characteristics field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
 + matrix_coefficients[i][j]
- > indicates the value of the matrix_coefficients field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the profile_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of matrix_cofficients field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. 
+ > indicates the value of the matrix_coefficients field in the jth variation of the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1, then the same value of this field must be used as the value of the profile_idc field in the frame header of the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i. If the value of number_of_frame_info[i] is 1 is greater than 1, then the frame header in each sample must provide the value of matrix_cofficients field matched with one among the values of this field for all index j for the frames whose value of the pbu_type field in the pbu header immediately preceding it is identical with the value of the pbu_type[i] field for a certain index i.
 
-## APV Sample Description 
+## APV Sample Description
 
-###	Format of sample 
+###	Format of sample
 When APV coded bitstream is encapsulated in a track with APVSamspleEntry, each sample shall contain one and only one access unit of APV coded data
 
-###	Sync sample 
-Every samples of APV bitstream shall be sync samples. 
+###	Sync sample
+Every samples of APV bitstream shall be sync samples.
 
-###	Sub-sample for APV 
+###	Sub-sample for APV
 For the use of the SubSampleInformationBox as defined in ISO/IEC 14496-12 in an APV stream, a sub-sample is defined on the basis of the value of the flags field of the sub-sample information box as specified below. The presence of this box is optional; however, if present in a track containing APV data, the codec_specific_parameters field in the box shall have the semantics defined here.
 
 flags specifies the type of sub-sample information given in this box as follows:
@@ -163,7 +163,7 @@ The codec_specific_parameters field of the SubSampleInformationBox is defined fo
 ~~~~
 
 		if (flags == 0) {
-			unsigned int(32) tile_index;		
+			unsigned int(32) tile_index;
                              }
 		else {
 			bit(32) reserved = 0;

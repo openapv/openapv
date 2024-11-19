@@ -105,10 +105,10 @@ struct oapv_fi {     // 112byte
     int level_idc;   /* u( 8) */
     int band_idc;    /* u( 3) */
     // int            reserved_zero_5bits;                     /* u( 5) */
-    int frame_width;           /* u(32) minus 1 */
-    int frame_height;          /* u(32) minus 1 */
+    u32 frame_width;           /* u(32) */
+    u32 frame_height;          /* u(32) */
     int chroma_format_idc;     /* u( 4) */
-    int bit_depth;             /* u( 4) minus 8 */
+    int bit_depth;             /* u( 4) */
     int capture_time_distance; /* u( 8) */
     // int            reserved_zero_8bits;                     /* u( 8) */
 };
@@ -132,7 +132,7 @@ struct oapv_fh {
     int       tile_width_in_mbs;            /* u(28) minus 1*/
     int       tile_height_in_mbs;           /* u(28) minus 1*/
     int       tile_size_present_in_fh_flag; /* u( 1) */
-    int       tile_size[OAPV_MAX_TILES];    /* u(32) minus 1*/
+    u32       tile_size[OAPV_MAX_TILES];    /* u(32) */
     /* ( end ) tile_info  */
     // int reserved_zero_8bits_4;                   /* u( 8) */
 };
@@ -145,7 +145,7 @@ typedef struct oapv_th oapv_th_t;
 struct oapv_th {
     int tile_header_size;    /* u(16) */
     int tile_index;          /* u(16) */
-    int tile_data_size[N_C]; /* u(32) minus 1 */
+    u32 tile_data_size[N_C]; /* u(32) */
     int tile_qp[N_C];        /* u( 8) */
     int reserved_zero_8bits; /* u( 8) */
 };
