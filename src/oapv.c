@@ -1865,6 +1865,9 @@ oapvd_t oapvd_create(oapvd_cdesc_t *cdesc, int *err)
     DUMP_CREATE(0);
     ctx = NULL;
 
+    /* check if any decoder argument is correctly set */
+    oapv_assert_gv(cdesc->threads > 0 && cdesc->threads <= OAPV_MAX_THREADS, ret, OAPV_ERR_INVALID_ARGUMENT, ERR);
+
     /* memory allocation for ctx and core structure */
     ctx = (oapvd_ctx_t *)dec_ctx_alloc();
     oapv_assert_gv(ctx != NULL, ret, OAPV_ERR_OUT_OF_MEMORY, ERR);
@@ -2074,6 +2077,7 @@ int oapvd_info(void *au, int au_size, oapv_au_info_t *aui)
             // parse frame_info in PBU
             oapv_fi_t fi;
 
+            oapv_assert_rv(frm_count < OAPV_MAX_NUM_FRAMES, OAPV_ERR_REACHED_MAX)
             ret = oapvd_vlc_frame_info(&bs, &fi);
             oapv_assert_rv(OAPV_SUCCEEDED(ret), ret);
 
