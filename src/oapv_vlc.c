@@ -672,11 +672,13 @@ int oapvd_vlc_frame_info(oapv_bs_t *bs, oapv_fi_t *fi)
     DUMP_HLS(fi->frame_width, fi->frame_width);
     oapv_assert_rv(fi->frame_width > 0 && fi->frame_width < 0xFFFFFFFF, OAPV_ERR_MALFORMED_BITSTREAM);
     fi->frame_width += 1;
+    oapv_assert_rv(fi->frame_width <= INT_MAX, OAPV_ERR_UNSUPPORTED); // frame width greater than 2^31 is unsupported in the current implementation
 
     fi->frame_height = oapv_bsr_read(bs, 32);
     DUMP_HLS(fi->frame_height, fi->frame_height);
     oapv_assert_rv(fi->frame_height > 0 && fi->frame_height < 0xFFFFFFFF, OAPV_ERR_MALFORMED_BITSTREAM);
     fi->frame_height += 1;
+    oapv_assert_rv(fi->frame_height <= INT_MAX, OAPV_ERR_UNSUPPORTED); // frame height greater than 2^31 is unsupported in the current implementation
 
     fi->chroma_format_idc = oapv_bsr_read(bs, 4);
     DUMP_HLS(fi->chroma_format_idc, fi->chroma_format_idc);
@@ -711,6 +713,7 @@ int oapvd_vlc_au_info(oapv_bs_t *bs, oapv_aui_t *aui)
 
     aui->num_frames = oapv_bsr_read(bs, 16);
     DUMP_HLS(num_frames, aui->num_frames);
+    oapv_assert_rv(aui->num_frames <= OAPV_MAX_NUM_FRAMES, OAPV_ERR_REACHED_MAX);
     for(int fidx = 0; fidx < aui->num_frames; fidx++) {
         aui->pbu_type[fidx] = oapv_bsr_read(bs, 8);
         DUMP_HLS(pbu_type, aui->pbu_type[fidx]);
