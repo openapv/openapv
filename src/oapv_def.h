@@ -251,7 +251,7 @@ struct oapve_tile {
     int             y; /* y (row) position in a frame in unit of pixel */
     int             w; /* tile width in unit of pixel */
     int             h; /* tile height in unit of pixel */
-    u32             data_size;
+    u32             tile_size;
     oapve_rc_tile_t rc;
     u8             *bs_buf;
     s32             bs_size;
