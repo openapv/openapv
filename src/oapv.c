@@ -803,9 +803,9 @@ static int enc_tile(oapve_ctx_t *ctx, oapve_core_t *core, oapve_tile_t *tile)
         qp = ctx->qp[Y_C];
     }
 
-    tile->data_size = 0;
+    tile->tile_size = 0;
     DUMP_SAVE(0);
-    oapve_vlc_tile_size(&bs, tile->data_size);
+    oapve_vlc_tile_size(&bs, tile->tile_size);
     oapve_set_tile_header(ctx, &tile->th, core->tile_idx, qp);
     oapve_vlc_tile_header(ctx, &bs, &tile->th);
 
@@ -882,11 +882,11 @@ static int enc_tile(oapve_ctx_t *ctx, oapve_core_t *core, oapve_tile_t *tile)
     oapv_bs_t bs_th;
     bs_th.is_bin_count = 0;
     oapv_bsw_init(&bs_th, tile->bs_buf, tile->bs_size, NULL);
-    tile->data_size = bs_size - OAPV_TILE_SIZE_LEN;
+    tile->tile_size = bs_size - OAPV_TILE_SIZE_LEN;
 
     DUMP_SAVE(1);
     DUMP_LOAD(0);
-    oapve_vlc_tile_size(&bs_th, tile->data_size);
+    oapve_vlc_tile_size(&bs_th, tile->tile_size);
     oapve_vlc_tile_header(ctx, &bs_th, &tile->th);
     DUMP_LOAD(1);
     oapv_bsw_deinit(&bs_th);

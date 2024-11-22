@@ -411,6 +411,11 @@ void oapve_set_tile_header(oapve_ctx_t *ctx, oapv_th_t *th, int tile_idx, int qp
         }
     }
     th->tile_index = tile_idx;
+
+    for(int i = 0; i < N_C; i++) {
+        // this setting is required to prevent underflow at dummy writing tile header due to '-1'.
+        th->tile_data_size[i] = 1;
+    }
 }
 
 int oapve_vlc_tile_header(oapve_ctx_t *ctx, oapv_bs_t *bs, oapv_th_t *th)
