@@ -1,0 +1,81 @@
+name: Release packages
+on:
+  release:
+    types: [published]
+
+  workflow_dispatch:
+
+jobs:
+  build-pc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v2
+
+      - name: Build PC Linux version of openAPV, generate packages and md5 file
+        run: |
+          cmake -S ${{github.workspace}} -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build ${{github.workspace}}/build
+          make package
+
+      - name: 'Upload PC Linux artifacts'
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapv-linux-${{github.event.release.tag_name}}
+          path: |
+            ${{ github.workspace }}/build/*.deb
+            ${{ github.workspace }}/build/*.md5
+          retention-days: 7
+
+      - name: Upload Linux assets to GitHub Release
+        uses: xresloader/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: "build/*.deb; build/*.md5"
+          update_latest_release: true
+          draft: false
+          overwrite: true
+
+  build-arm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v2
+
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+
+      - name: Build ARM
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=Release -S ${{github.workspace}} -B ${{github.workspace}}/build-arm -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DARM=TRUE -DCMAKE_SYSTEM_PROCESSOR=aarch64
+          cmake --build ${{github.workspace}}/build-arm
+          make package
+ 
+      - name: 'Upload ARM artifacts'
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapv-arm-${{github.event.release.tag_name}}
+          path: |
+            ${{ github.workspace }}/build/*.deb
+            ${{ github.workspace }}/build/*.md5
+          retention-days: 7
+
+      - name: Upload ARM assets to GitHub Release
+        uses: xresloader/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: "build/*.deb; build/*.md5"
+          update_latest_release: true
+          draft: false
+          overwrite: true
+
