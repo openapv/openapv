@@ -140,7 +140,7 @@ add_test(NAME Encoder_runs COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/oapv_app_enc)
 add_test(NAME Decoder_runs COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/oapv_app_dec)
 
 # Test - encode
-add_test(NAME encode COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/oapv_app_enc -i ${CMAKE_CURRENT_SOURCE_DIR}/test/sequence/pattern1_yuv422p10le_320x240_25fps.y4m -o out.oapv)
+add_test(NAME encode COMMAND ${CMAKE_CURRENT_BINARY_DIR}/bin/oapv_app_enc -i ${CMAKE_CURRENT_SOURCE_DIR}/test/sequence/pattern1_yuv422p10le_320x240_25fps.y4m -w 320 -h 240 -z 25 -o out.oapv)
 set_tests_properties(encode PROPERTIES FAIL_REGULAR_EXPRESSION "Encoded frame count               = 0")
 set_tests_properties(encode PROPERTIES PASS_REGULAR_EXPRESSION "Encoded frame count               = 125")
 
