@@ -197,9 +197,8 @@ static int bsr_flush(oapv_bs_t *bs, int byte)
 
     bs->leftbits = byte << 3;
 
-    bs->cur += byte;
     while(byte) {
-        code |= *(bs->cur - byte) << shift;
+        code |= *(bs->cur++) << shift;
         byte--;
         shift -= 8;
     }
@@ -237,6 +236,17 @@ int oapv_bsr_clz_in_code(u32 code)
     return clz;
 }
 
+int oapv_bsr_clz(oapv_bs_t *bs)
+{
+    int clz;
+    u32 code;
+
+    code = oapv_bsr_peek(bs, 32);
+    oapv_assert(code != 0);
+    clz = oapv_bsr_clz_in_code(code);
+    return clz;
+}
+
 void oapv_bsr_align8(oapv_bs_t *bs)
 {
     /*
@@ -266,7 +276,7 @@ void oapv_bsr_skip(oapv_bs_t *bs, int size)
     bsr_skip_code(bs, size);
 }
 
-void oapv_bsr_peek(oapv_bs_t *bs, u32 *val, int size)
+u32 oapv_bsr_peek(oapv_bs_t *bs, int size)
 {
     int byte, leftbits;
     u32 code = 0;
@@ -302,7 +312,7 @@ void oapv_bsr_peek(oapv_bs_t *bs, u32 *val, int size)
             code |= *(bs->cur) >> (8 - size);
         }
     }
-    *val = code;
+    return code;
 }
 
 void *oapv_bsr_sink(oapv_bs_t *bs)

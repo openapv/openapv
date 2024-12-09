@@ -100,12 +100,11 @@ static const args_opt_t enc_args_opts[] = {
     {
         ARGS_NO_KEY,  "input-csp", ARGS_VAL_TYPE_INTEGER, 0, NULL,
         "input color space (chroma format)\n"
-        "      - 0: YUV400\n"
-        "      - 1: YUV420\n"
-        "      - 2: YUV422\n"
-        "      - 3: YUV444\n"
-        "      - 4: YUV4444\n"
-        "      - 5: P2(Planar Y, Combined UV, 422)"
+        "      - 0: 400\n"
+        "      - 2: 422\n"
+        "      - 3: 444\n"
+        "      - 4: 4444\n"
+        "      - 5: P2(Planar Y, Combined CbCr, 422)"
     },
     {
         ARGS_NO_KEY,  "profile", ARGS_VAL_TYPE_STRING, 0, NULL,
@@ -154,20 +153,20 @@ static const args_opt_t enc_args_opts[] = {
         "user filler flag"
     },
     {
-        ARGS_NO_KEY,  "q-matrix-y", ARGS_VAL_TYPE_STRING, 0, NULL,
-        "custom quantization matrix for Y \"q1 q2 ... q63 q64\""
+        ARGS_NO_KEY,  "q-matrix-c0", ARGS_VAL_TYPE_STRING, 0, NULL,
+        "custom quantization matrix for component 0 (Y) \"q1 q2 ... q63 q64\""
     },
     {
-        ARGS_NO_KEY,  "q-matrix-u", ARGS_VAL_TYPE_STRING, 0, NULL,
-        "custom quantization matrix for U \"q1 q2 ... q63 q64\""
+        ARGS_NO_KEY,  "q-matrix-c1", ARGS_VAL_TYPE_STRING, 0, NULL,
+        "custom quantization matrix for component 1 (Cb) \"q1 q2 ... q63 q64\""
     },
     {
-        ARGS_NO_KEY,  "q-matrix-v", ARGS_VAL_TYPE_STRING, 0, NULL,
-        "custom quantization matrix for V \"q1 q2 ... q63 q64\""
+        ARGS_NO_KEY,  "q-matrix-c2", ARGS_VAL_TYPE_STRING, 0, NULL,
+        "custom quantization matrix for component 2 (Cr) \"q1 q2 ... q63 q64\""
     },
     {
-        ARGS_NO_KEY,  "q-matrix-x", ARGS_VAL_TYPE_STRING, 0, NULL,
-        "custom quantization matrix for X \"q1 q2 ... q63 q64\""
+        ARGS_NO_KEY,  "q-matrix-c3", ARGS_VAL_TYPE_STRING, 0, NULL,
+        "custom quantization matrix for component 3 \"q1 q2 ... q63 q64\""
     },
     {
         ARGS_NO_KEY,  "hash", ARGS_VAL_TYPE_NONE, 0, NULL,
@@ -196,10 +195,7 @@ typedef struct args_var {
     int            band;
     char           bitrate[64];
     char           fps[256];
-    char           q_matrix_y[512];
-    char           q_matrix_u[512];
-    char           q_matrix_v[512];
-    char           q_matrix_x[512];
+    char           q_matrix[OAPV_MAX_CC][512]; // raster-scan order
     char           preset[32];
     oapve_param_t *param;
 } args_var_t;
@@ -230,26 +226,26 @@ static args_var_t *args_init_vars(args_parser_t *args, oapve_param_t *param)
     vars->input_csp = -1;
     args_set_variable_by_key_long(opts, "seek", &vars->seek);
     args_set_variable_by_key_long(opts, "profile", vars->profile);
-    strncpy(vars->profile, "422-10", sizeof(vars->profile) - 1);
+    strcpy(vars->profile, "422-10");
     args_set_variable_by_key_long(opts, "level", vars->level);
-    strncpy(vars->level, "4.1", sizeof(vars->level) - 1);
+    strcpy(vars->level, "4.1");
     args_set_variable_by_key_long(opts, "band", &vars->band);
     vars->band = 2; /* default */
     args_set_variable_by_key_long(opts, "bitrate", vars->bitrate);
     args_set_variable_by_key_long(opts, "fps", vars->fps);
-    strncpy(vars->fps, "60", sizeof(vars->fps) - 1);
-    args_set_variable_by_key_long(opts, "q-matrix-y", vars->q_matrix_y);
-    strncpy(vars->q_matrix_y, "", sizeof(vars->q_matrix_y) - 1);
-    args_set_variable_by_key_long(opts, "q-matrix-u", vars->q_matrix_u);
-    strncpy(vars->q_matrix_u, "", sizeof(vars->q_matrix_y) - 1);
-    args_set_variable_by_key_long(opts, "q-matrix-v", vars->q_matrix_v);
-    strncpy(vars->q_matrix_v, "", sizeof(vars->q_matrix_y) - 1);
-    args_set_variable_by_key_long(opts, "q-matrix-x", vars->q_matrix_x);
-    strncpy(vars->q_matrix_x, "", sizeof(vars->q_matrix_x) - 1);
+    strcpy(vars->fps, "60");
+    args_set_variable_by_key_long(opts, "q-matrix-c0", vars->q_matrix[0]);
+    strcpy(vars->q_matrix[0], "");
+    args_set_variable_by_key_long(opts, "q-matrix-c1", vars->q_matrix[1]);
+    strcpy(vars->q_matrix[1], "");
+    args_set_variable_by_key_long(opts, "q-matrix-c2", vars->q_matrix[2]);
+    strcpy(vars->q_matrix[2], "");
+    args_set_variable_by_key_long(opts, "q-matrix-c3", vars->q_matrix[3]);
+    strcpy(vars->q_matrix[3], "");
     args_set_variable_by_key_long(opts, "threads", &vars->threads);
     vars->threads = 1; /* default */
     args_set_variable_by_key_long(opts, "preset", vars->preset);
-    strncpy(vars->preset, "", sizeof(vars->preset) - 1);
+    strcpy(vars->preset, "");
 
     ARGS_SET_PARAM_VAR_KEY(opts, param, w);
     ARGS_SET_PARAM_VAR_KEY(opts, param, h);
@@ -323,6 +319,17 @@ static int set_extra_config(oapve_t id, args_var_t *vars, oapve_param_t *param)
         }
     }
     return ret;
+}
+
+static int write_rec_img(char *fname, oapv_imgb_t *img, int flag_y4m)
+{
+    if(flag_y4m) {
+        if(write_y4m_frame_header(fname))
+            return -1;
+    }
+    if(imgb_write(fname, img))
+        return -1;
+    return 0;
 }
 
 static void print_commandline(int argc, const char **argv)
@@ -449,6 +456,7 @@ static int kbps_str_to_int(char *str)
 
 static int update_param(args_var_t *vars, oapve_param_t *param)
 {
+    int q_len[OAPV_MAX_CC];
     /* update reate controller  parameters */
     if(strlen(vars->bitrate) > 0) {
         param->bitrate = kbps_str_to_int(vars->bitrate);
@@ -456,116 +464,26 @@ static int update_param(args_var_t *vars, oapve_param_t *param)
     }
 
     /* update q_matrix */
-    int len_y = (int)strlen(vars->q_matrix_y);
-    if(len_y > 0) {
-        param->use_q_matrix = 1;
-        char *tmp = vars->q_matrix_y;
-        int   cnt = 0;
-        int   len_cnt = 0;
-        while(len_cnt < len_y && cnt < OAPV_BLK_D) {
-            sscanf(tmp, "%d", &param->q_matrix_y[cnt]);
-            if(param->q_matrix_y[cnt] < 1 || param->q_matrix_y[cnt] > 255) {
-                logerr("input value of q_matrix_y is invalid\n");
+    for(int c = 0; c < OAPV_MAX_CC; c++) {
+        q_len[c] = (int)strlen(vars->q_matrix[c]);
+        if(q_len[c] > 0) {
+            param->use_q_matrix = 1;
+            char *qstr = vars->q_matrix[c];
+            int   qcnt = 0;
+            while(strlen(qstr) > 0 && qcnt < OAPV_BLK_D) {
+                int t0, read;
+                sscanf(qstr, "%d%n", &t0, &read);
+                if(t0 < 1 || t0 > 255) {
+                    logerr("input value (%d) for q_matrix[%d][%d] is invalid\n", t0, c, qcnt);
+                    return -1;
+                }
+                param->q_matrix[c][qcnt] = t0;
+                qstr += read;
+                qcnt++;
+            }
+            if(qcnt < OAPV_BLK_D) {
+                logerr("input number of q_matrix[%d] is not enough\n", c);
                 return -1;
-            }
-            len_cnt += (int)log10(param->q_matrix_y[cnt]) + 2;
-            tmp = vars->q_matrix_y + len_cnt;
-            cnt++;
-        }
-        if(cnt < OAPV_BLK_D) {
-            logerr("input number of q_matrix_y is not enough\n");
-            return -1;
-        }
-    }
-
-    int len_u = (int)strlen(vars->q_matrix_u);
-    if(len_u > 0) {
-        param->use_q_matrix = 1;
-        char *tmp = vars->q_matrix_u;
-        int   cnt = 0;
-        int   len_cnt = 0;
-        while(len_cnt < len_u && cnt < OAPV_BLK_D) {
-            sscanf(tmp, "%d", &param->q_matrix_u[cnt]);
-            if(param->q_matrix_u[cnt] < 1 || param->q_matrix_u[cnt] > 255) {
-                logerr("input value of q_matrix_u is invalid\n");
-                return -1;
-            }
-            len_cnt += (int)log10(param->q_matrix_u[cnt]) + 2;
-            tmp = vars->q_matrix_u + len_cnt;
-            cnt++;
-        }
-        if(cnt < OAPV_BLK_D) {
-            logerr("input number of q_matrix_u is not enough\n");
-            return -1;
-        }
-    }
-
-    int len_v = (int)strlen(vars->q_matrix_v);
-    if(len_v > 0) {
-        param->use_q_matrix = 1;
-        char *tmp = vars->q_matrix_v;
-        int   cnt = 0;
-        int   len_cnt = 0;
-        while(len_cnt < len_v && cnt < OAPV_BLK_D) {
-            sscanf(tmp, "%d", &param->q_matrix_v[cnt]);
-            if(param->q_matrix_v[cnt] < 1 || param->q_matrix_v[cnt] > 255) {
-                logerr("input value of q_matrix_v is invalid\n");
-                return -1;
-            }
-            len_cnt += (int)log10(param->q_matrix_v[cnt]) + 2;
-            tmp = vars->q_matrix_v + len_cnt;
-            cnt++;
-        }
-        if(cnt < OAPV_BLK_D) {
-            logerr("input number of q_matrix_v is not enough\n");
-            return -1;
-        }
-    }
-
-    int len_x = (int)strlen(vars->q_matrix_x);
-    if (len_x > 0) {
-        param->use_q_matrix = 1;
-        char* tmp = vars->q_matrix_x;
-        int   cnt = 0;
-        int   len_cnt = 0;
-        while (len_cnt < len_x && cnt < OAPV_BLK_D) {
-            sscanf(tmp, "%d", &param->q_matrix_x[cnt]);
-            if (param->q_matrix_x[cnt] < 1 || param->q_matrix_x[cnt] > 255) {
-                logerr("input value of q_matrix_x is invalid\n");
-                return -1;
-            }
-            len_cnt += (int)log10(param->q_matrix_x[cnt]) + 2;
-            tmp = vars->q_matrix_x + len_cnt;
-            cnt++;
-        }
-        if (cnt < OAPV_BLK_D) {
-            logerr("input number of q_matrix_x is not enough\n");
-            return -1;
-        }
-    }
-
-    if(param->use_q_matrix) {
-        if(len_y == 0) {
-            for(int i = 0; i < OAPV_BLK_D; i++) {
-                param->q_matrix_y[i] = 16;
-            }
-        }
-
-        if(len_u == 0) {
-            for(int i = 0; i < OAPV_BLK_D; i++) {
-                param->q_matrix_u[i] = 16;
-            }
-        }
-
-        if(len_v == 0) {
-            for(int i = 0; i < OAPV_BLK_D; i++) {
-                param->q_matrix_v[i] = 16;
-            }
-        }
-
-        if (len_x == 0) {
-            for (int i = 0; i < OAPV_BLK_D; i++) {
-                param->q_matrix_x[i] = 16;
             }
         }
     }
@@ -644,9 +562,10 @@ int main(int argc, const char **argv)
     int            ret;
     oapv_clk_t     clk_beg, clk_end, clk_tot;
     oapv_mtime_t   au_cnt, au_skip;
+    int            frm_cnt[MAX_NUM_FRMS] = { 0 };
     double         bitrate_tot; // total bitrate (byte)
     double         psnr_avg[MAX_NUM_FRMS][MAX_NUM_CC] = { 0 };
-    int            is_y4m;
+    int            is_inp_y4m, is_rec_y4m;
     y4m_params_t   y4m;
     int            is_out = 0, is_rec = 0;
     char          *errstr = NULL;
@@ -713,8 +632,8 @@ int main(int argc, const char **argv)
     }
 
     /* y4m header parsing  */
-    is_y4m = y4m_test(fp_inp);
-    if(is_y4m) {
+    is_inp_y4m = y4m_test(fp_inp);
+    if(is_inp_y4m) {
         if(y4m_header_parser(fp_inp, &y4m)) {
             logerr("This y4m is not supported (%s)\n", args_var->fname_inp);
             ret = -1;
@@ -775,6 +694,17 @@ int main(int argc, const char **argv)
     }
 
     if(strlen(args_var->fname_rec) > 0) {
+        ret = check_file_name_type(args_var->fname_rec);
+        if(ret > 0) {
+            is_rec_y4m = 1;
+        }
+        else if(ret == 0) {
+            is_rec_y4m = 0;
+        }
+        else { // invalid or unknown file name type
+            logerr("unknown file name type for reconstructed video\n");
+            ret = -1; goto ERR;
+        }
         clear_data(args_var->fname_rec);
         is_rec = 1;
     }
@@ -858,7 +788,7 @@ int main(int argc, const char **argv)
             else {
                 imgb_i = imgb_r;
             }
-            ret = imgb_read(fp_inp, imgb_i, param->w, param->h, is_y4m);
+            ret = imgb_read(fp_inp, imgb_i, param->w, param->h, is_inp_y4m);
             if(ret < 0) {
                 logv3("reached out the end of input file\n");
                 ret = OAPV_OK;
@@ -885,14 +815,14 @@ int main(int argc, const char **argv)
 
             print_stat_au(&stat, au_cnt, param, args_var->max_au, bitrate_tot, clk_end, clk_tot);
 
-            for(int i = 0; i < num_frames; i++) {
+            for(int fidx = 0; fidx < num_frames; fidx++) {
                 if(is_rec) {
                     if(args_var->input_depth != 10) {
-                        imgb_cpy(imgb_w, rfrms.frm[i].imgb);
+                        imgb_cpy(imgb_w, rfrms.frm[fidx].imgb);
                         imgb_o = imgb_w;
                     }
                     else {
-                        imgb_o = rfrms.frm[i].imgb;
+                        imgb_o = rfrms.frm[fidx].imgb;
                     }
                 }
 
@@ -914,16 +844,23 @@ int main(int argc, const char **argv)
 
                 // store recon image
                 if(is_rec) {
-                    if(imgb_write(args_var->fname_rec, imgb_o)) {
-                        logerr("cannot write reconstruction image\n");
+                    if(frm_cnt[fidx] == 0 && is_rec_y4m) {
+                        if(write_y4m_header(args_var->fname_rec, imgb_o)) {
+                            logerr("cannot write Y4M header\n");
+                            ret = -1;
+                            goto ERR;
+                        }
+                    }
+                    if(write_rec_img(args_var->fname_rec, imgb_o, is_rec_y4m)) {
+                        logerr("cannot write reconstructed video\n");
                         ret = -1;
                         goto ERR;
                     }
                 }
-
                 print_stat_frms(&stat, &ifrms, &rfrms, psnr_avg);
-                au_cnt++;
+                frm_cnt[fidx] += 1;
             }
+            au_cnt++;
         }
         else if(state == STATE_SKIPPING) {
             if(au_skip < args_var->seek) {

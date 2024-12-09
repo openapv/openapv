@@ -34,8 +34,150 @@
 
 #if ARM_NEON
 
+/* SAD for 16bit **************************************************************/
+int sad_16b_neon_8x2n(int w, int h, void *src1, void *src2, int s_src1, int s_src2)
+{
+    int sad = 0;
+    s16* s1 = (s16*) src1;
+    s16* s2 = (s16*) src2;
+    int16x8_t s1_vector, s2_vector;
+    int32x4_t  diff_part1, diff_part2, diff_part1_abs, diff_part2_abs, sad_vector, sad_vector_temp;
+    // Loop unrolled    
+    { // Row 0
+        // Loading one row (8 elements) each of src1 and src_2
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+        
+        // Subtracting s1_vector from s2_vector and storing in 32 bits
+        diff_part1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
+        diff_part2 = vsubl_high_s16(s1_vector, s2_vector);
+
+        //Taking absolute value of difference and adding them
+        diff_part1_abs = vabsq_s32(diff_part1);
+        diff_part2_abs = vabsq_s32(diff_part2);
+        
+        sad_vector = vaddq_s32(diff_part1_abs, diff_part2_abs);
+    }    
+    { // Row 1
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+        
+        diff_part1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
+        diff_part2 = vsubl_high_s16(s1_vector, s2_vector);
+
+        diff_part1_abs = vabsq_s32(diff_part1);
+        diff_part2_abs = vabsq_s32(diff_part2);
+        
+        sad_vector_temp = vaddq_s32(diff_part1_abs, diff_part2_abs);
+        // Updating sad_vector by adding the new values
+        sad_vector = vaddq_s32(sad_vector, sad_vector_temp);
+    }    
+    { // Row 2
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+        
+        diff_part1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
+        diff_part2 = vsubl_high_s16(s1_vector, s2_vector);
+
+        diff_part1_abs = vabsq_s32(diff_part1);
+        diff_part2_abs = vabsq_s32(diff_part2);
+        
+        sad_vector_temp = vaddq_s32(diff_part1_abs, diff_part2_abs);
+        sad_vector = vaddq_s32(sad_vector, sad_vector_temp);
+    }    
+    { // Row 3
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+        
+        diff_part1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
+        diff_part2 = vsubl_high_s16(s1_vector, s2_vector);
+
+        diff_part1_abs = vabsq_s32(diff_part1);
+        diff_part2_abs = vabsq_s32(diff_part2);
+        
+        sad_vector_temp = vaddq_s32(diff_part1_abs, diff_part2_abs);
+        sad_vector = vaddq_s32(sad_vector, sad_vector_temp);
+    }    
+    { // Row 4
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+        
+        diff_part1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
+        diff_part2 = vsubl_high_s16(s1_vector, s2_vector);
+
+        diff_part1_abs = vabsq_s32(diff_part1);
+        diff_part2_abs = vabsq_s32(diff_part2);
+        
+        sad_vector_temp = vaddq_s32(diff_part1_abs, diff_part2_abs);
+        sad_vector = vaddq_s32(sad_vector, sad_vector_temp);
+    }    
+    { // Row 5
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+        
+        diff_part1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
+        diff_part2 = vsubl_high_s16(s1_vector, s2_vector);
+
+        diff_part1_abs = vabsq_s32(diff_part1);
+        diff_part2_abs = vabsq_s32(diff_part2);
+        
+        sad_vector_temp = vaddq_s32(diff_part1_abs, diff_part2_abs);
+        sad_vector = vaddq_s32(sad_vector, sad_vector_temp);
+    }    
+    { // Row 6
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+        
+        diff_part1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
+        diff_part2 = vsubl_high_s16(s1_vector, s2_vector);
+
+        diff_part1_abs = vabsq_s32(diff_part1);
+        diff_part2_abs = vabsq_s32(diff_part2);
+        
+        sad_vector_temp = vaddq_s32(diff_part1_abs, diff_part2_abs);
+        sad_vector = vaddq_s32(sad_vector, sad_vector_temp);
+    }    
+    { // Row 7
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+        
+        diff_part1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
+        diff_part2 = vsubl_high_s16(s1_vector, s2_vector);
+
+        diff_part1_abs = vabsq_s32(diff_part1);
+        diff_part2_abs = vabsq_s32(diff_part2);
+        
+        sad_vector_temp = vaddq_s32(diff_part1_abs, diff_part2_abs);
+        sad_vector = vaddq_s32(sad_vector, sad_vector_temp);
+    }
+    // Adding all the elments in sad vector
+    sad = vaddvq_s32(sad_vector);
+    return sad;
+}
+
+const oapv_fn_sad_t oapv_tbl_fn_sad_16b_neon[2] = {
+    sad_16b_neon_8x2n,
+    NULL
+};
+
 /* SSD ***********************************************************************/
-static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int bit_depth)
+static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, int s_src2)
 {
     s64 ssd = 0;
     s16* s1 = (s16*) src1;
@@ -45,8 +187,8 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
     int32x4_t diff1, diff2;
     int32x2_t diff1_low, diff2_low;
     int64x2_t sq_diff1_low, sq_diff1_high, sq_diff2_low, sq_diff2_high, sq_diff;
-    
-    {
+    // Loop unrolling      
+    { // Row 0
         s1_vector = vld1q_s16(s1);
         s1 += s_src1;
         s2_vector = vld1q_s16(s2);
@@ -66,7 +208,7 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
         sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
         sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
     }
-    {
+    { // Row 1
         s1_vector = vld1q_s16(s1);
         s1 += s_src1;
         s2_vector = vld1q_s16(s2);
@@ -87,7 +229,7 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
         sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
         sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
     }
-    {
+    { // Row 2
         s1_vector = vld1q_s16(s1);
         s1 += s_src1;
         s2_vector = vld1q_s16(s2);
@@ -108,7 +250,7 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
         sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
         sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
     }
-    {
+    { // Row 3
         s1_vector = vld1q_s16(s1);
         s1 += s_src1;
         s2_vector = vld1q_s16(s2);
@@ -129,7 +271,7 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
         sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
         sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
     }
-    {
+    { // Row 4
         s1_vector = vld1q_s16(s1);
         s1 += s_src1;
         s2_vector = vld1q_s16(s2);
@@ -150,7 +292,7 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
         sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
         sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
     }
-    {
+    { // Row 5
         s1_vector = vld1q_s16(s1);
         s1 += s_src1;
         s2_vector = vld1q_s16(s2);
@@ -171,7 +313,7 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
         sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
         sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
     }
-    {
+    { // Row 6
         s1_vector = vld1q_s16(s1);
         s1 += s_src1;
         s2_vector = vld1q_s16(s2);
@@ -192,7 +334,7 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
         sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
         sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
     }
-    {
+    { // Row 7
         s1_vector = vld1q_s16(s1);
         s1 += s_src1;
         s2_vector = vld1q_s16(s2);
@@ -222,6 +364,109 @@ const oapv_fn_ssd_t oapv_tbl_fn_ssd_16b_neon[2] =
         ssd_16b_neon_8x8,
             NULL};
 
+/* DIFF **********************************************************************/
+static void diff_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int s_diff, s16 *diff)
+{
+    s16* s1 = (s16*) src1;
+    s16* s2 = (s16*) src2;
+    int16x8_t s1_vector, s2_vector, diff_vector;
+    // Loop unrolled    
+    { // Row 0
+        // Loading one row (8 elements) each of src1 and src_2
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+
+        // Subtracting s1_vector from s2_vector
+        diff_vector = vsubq_s16(s1_vector, s2_vector);
+
+        // Storing the result in diff
+        vst1q_s16(diff, diff_vector);
+        diff += s_diff;
+    }    
+    { // Row 1
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+
+        diff_vector = vsubq_s16(s1_vector, s2_vector);
+
+        vst1q_s16(diff, diff_vector);
+        diff += s_diff;
+    }    
+    { // Row 2
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+
+        diff_vector = vsubq_s16(s1_vector, s2_vector);
+
+        vst1q_s16(diff, diff_vector);
+        diff += s_diff;
+    }   
+    { // Row 3
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+
+        diff_vector = vsubq_s16(s1_vector, s2_vector);
+
+        vst1q_s16(diff, diff_vector);
+        diff += s_diff;
+    }    
+    { // Row 4
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+
+        diff_vector = vsubq_s16(s1_vector, s2_vector);
+
+        vst1q_s16(diff, diff_vector);
+        diff += s_diff;
+    }    
+    { // Row 5
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+
+        diff_vector = vsubq_s16(s1_vector, s2_vector);
+
+        vst1q_s16(diff, diff_vector);
+        diff += s_diff;
+    }    
+    { // Row 6
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+
+        diff_vector = vsubq_s16(s1_vector, s2_vector);
+
+        vst1q_s16(diff, diff_vector);
+        diff += s_diff;
+    }    
+    { // Row 7
+        s1_vector = vld1q_s16(s1);
+        s1 += s_src1;
+        s2_vector = vld1q_s16(s2);
+        s2 += s_src2;
+
+        diff_vector = vsubq_s16(s1_vector, s2_vector);
+
+        vst1q_s16(diff, diff_vector);
+        diff += s_diff;
+    }
+}
+const oapv_fn_diff_t oapv_tbl_fn_diff_16b_neon[2] = {
+    diff_16b_neon_8x8,
+    NULL
+};
 
 int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
 {

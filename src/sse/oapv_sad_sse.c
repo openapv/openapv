@@ -51,7 +51,7 @@
     s00a = _mm_add_epi32(s00a, s00); \
     s00a = _mm_add_epi32(s00a, s01);
 
-static s64 ssd_16b_sse_8x8(int w, int h, void * src1, void * src2, int s_src1, int s_src2, int bit_depth)
+static s64 ssd_16b_sse_8x8(int w, int h, void * src1, void * src2, int s_src1, int s_src2)
 {
     s64   ssd;
     s16 * s1;
