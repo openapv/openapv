@@ -64,7 +64,7 @@ The APV codec standard has the following features:
 ## How to use
 ### Encoder
 
-Encoder as input require raw YUV file (422, 444), 10-bit or more.
+Encoder as input require raw YCbCr file (422, 444), 10-bit or more.
 
 Displaying help:
 

@@ -129,7 +129,7 @@ extern "C" {
 #define OAPV_CS_YCBCR420_14LE           OAPV_CS_SET(OAPV_CF_YCBCR420, 14, 0)
 #define OAPV_CS_P210                    OAPV_CS_SET(OAPV_CF_PLANAR2, 10, 0)
 
-/* max number of color channel: YCbCr4444 -> 4 channels */
+/* max number of color channel: ex) YCbCr4444 -> 4 channels */
 #define OAPV_MAX_CC                     (4)
 
 /*****************************************************************************
@@ -342,17 +342,26 @@ struct oapv_bitb {
  *****************************************************************************/
 typedef struct oapv_frm_info oapv_frm_info_t;
 struct oapv_frm_info {
-    int w;
-    int h;
-    int cs;
-    int pbu_type;
-    int group_id;
-    int profile_idc;
-    int level_idc;
-    int band_idc;
-    int chroma_format_idc;
-    int bit_depth;
-    int capture_time_distance;
+    int           w;
+    int           h;
+    int           cs;
+    int           pbu_type;
+    int           group_id;
+    int           profile_idc;
+    int           level_idc;
+    int           band_idc;
+    int           chroma_format_idc;
+    int           bit_depth;
+    int           capture_time_distance;
+    /* custom quantization matrix */
+    int           use_q_matrix;
+    unsigned char q_matrix[OAPV_MAX_CC][OAPV_BLK_D]; // only meaningful if use_q_matrix is true
+    /* color description values */
+    int           color_description_present_flag;
+    unsigned char color_primaries;          // only meaningful if color_description_present_flag is true
+    unsigned char transfer_characteristics; // only meaningful if color_description_present_flag is true
+    unsigned char matrix_coefficients;      // only meaningful if color_description_present_flag is true
+    int           full_range_flag;          // only meaningful if color_description_present_flag is true
 };
 
 typedef struct oapv_au_info oapv_au_info_t;
@@ -367,43 +376,46 @@ struct oapv_au_info {
 typedef struct oapve_param oapve_param_t;
 struct oapve_param {
     /* profile_idc */
-    int profile_idc;
+    int           profile_idc;
     /* level */
-    int level_idc;
+    int           level_idc;
     /* band */
-    int band_idc;
+    int           band_idc;
     /* width of input frame */
-    int w;
+    int           w;
     /* height of input frame */
-    int h;
+    int           h;
     /* frame rate (Hz) numerator, denominator */
-    int fps_num;
-    int fps_den;
+    int           fps_num;
+    int           fps_den;
     /* rate control type */
-    int rc_type;
+    int           rc_type;
     /* quantization parameter (0 ~ 63)*/
-    int qp;
+    int           qp;
     /* quantization parameter offset for CB */
-    int qp_cb_offset;
+    int           qp_cb_offset;
     /* quantization parameter offset for CR */
-    int qp_cr_offset;
+    int           qp_cr_offset;
     /* bitrate (unit: kbps) */
-    int bitrate;
+    int           bitrate;
     /* use filler data for tight constant bitrate */
-    int use_filler;
-    /* use filler quantization matrix */
-    int use_q_matrix;
-    int q_matrix_y[OAPV_BLK_D];
-    int q_matrix_u[OAPV_BLK_D];
-    int q_matrix_v[OAPV_BLK_D];
-    int q_matrix_x[OAPV_BLK_D];
+    int           use_filler;
+    /* use quantization matrix */
+    int           use_q_matrix;
+    unsigned char q_matrix[OAPV_MAX_CC][OAPV_BLK_D]; // raster-scan order
     /* color space */
-    int csp;
-    int tile_cols;
-    int tile_rows;
-    int tile_w_mb;
-    int tile_h_mb;
-    int preset;
+    int           csp;
+    int           tile_cols;
+    int           tile_rows;
+    int           tile_w_mb;
+    int           tile_h_mb;
+    int           preset;
+    /* color description values */
+    int           color_description_present_flag;
+    unsigned char color_primaries;
+    unsigned char transfer_characteristics;
+    unsigned char matrix_coefficients;
+    int           full_range_flag;
 };
 
 /*****************************************************************************

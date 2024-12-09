@@ -46,7 +46,7 @@ int oapve_rc_get_tile_cost(oapve_ctx_t* ctx, oapve_core_t* core, oapve_tile_t* t
                 int tx = tile->x + x;
                 int ty = tile->y + y;
 
-                ctx->fn_imgb_to_block_rc(ctx->imgb, c, tx, ty, 8, 8, core->coef);
+                ctx->fn_imgb_to_blk_rc(ctx->imgb, c, tx, ty, 8, 8, core->coef);
                 sum += ctx->fn_had8x8(core->coef, 8);
                 tile->rc.number_pixel += 64;
             }
@@ -184,7 +184,7 @@ void oapve_rc_get_qp(oapve_ctx_t* ctx, oapve_tile_t* tile, int frame_qp, int* qp
     *qp = (int)(4.2005 * log(est_lambda) + 13.7122 + 0.5);
     *qp = oapv_clip3(min_qp, max_qp, *qp);
     *qp += OAPV_RC_QP_OFFSET;
-
+    *qp = oapv_clip3(MIN_QUANT, MAX_QUANT, *qp);
 }
 
 void oapve_rc_update_after_pic(oapve_ctx_t* ctx, double cost)

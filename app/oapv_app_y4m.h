@@ -290,4 +290,32 @@ static int write_y4m_frame_header(char *fname)
     return 0;
 }
 
+// check whether file name is y4m type or not
+// return
+// - positive value : file name has y4m format name
+// - zero : YUV format name
+// - nogative value : unknown format name
+static int check_file_name_type(char * fname)
+{
+    char  fext[16];
+    if(strlen(fname) < 5) { /* at least x.yuv or x.y4m */
+        return -1;
+    }
+    strncpy(fext, fname + strlen(fname) - 3, sizeof(fext) - 1);
+    fext[0] = toupper(fext[0]);
+    fext[1] = toupper(fext[1]);
+    fext[2] = toupper(fext[2]);
+
+    if(strcmp(fext, "YUV") == 0) {
+        return 0;
+    }
+    else if(strcmp(fext, "Y4M") == 0) {
+        return 1;
+    }
+    else {
+        return -1;
+    }
+    return -1; // false
+}
+
 #endif /* _OAPV_APP_Y4M_H_ */

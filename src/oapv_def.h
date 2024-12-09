@@ -105,8 +105,8 @@ struct oapv_fi {     // 112byte
     int level_idc;   /* u( 8) */
     int band_idc;    /* u( 3) */
     // int            reserved_zero_5bits;                     /* u( 5) */
-    u32 frame_width;           /* u(32) */
-    u32 frame_height;          /* u(32) */
+    u32 frame_width;           /* u(24) */
+    u32 frame_height;          /* u(24) */
     int chroma_format_idc;     /* u( 4) */
     int bit_depth;             /* u( 4) */
     int capture_time_distance; /* u( 8) */
@@ -124,13 +124,14 @@ struct oapv_fh {
     int       color_primaries;                /* u( 8) */
     int       transfer_characteristics;       /* u( 8) */
     int       matrix_coefficients;            /* u( 8) */
+    int       full_range_flag;                /* u( 1) */
     int       use_q_matrix;                   /* u( 1) */
     /* (start) quantization_matix  */
-    int       q_matrix[N_C][OAPV_BLK_H][OAPV_BLK_W]; /* u( 8) minus 1*/
+    int       q_matrix[N_C][OAPV_BLK_H][OAPV_BLK_W]; /* u( 8) */
     /* ( end ) quantization_matix  */
     /* (start) tile_info */
-    int       tile_width_in_mbs;            /* u(28) minus 1*/
-    int       tile_height_in_mbs;           /* u(28) minus 1*/
+    int       tile_width_in_mbs;            /* u(20) */
+    int       tile_height_in_mbs;           /* u(20) */
     int       tile_size_present_in_fh_flag; /* u( 1) */
     u32       tile_size[OAPV_MAX_TILES];    /* u(32) */
     /* ( end ) tile_info  */
@@ -182,16 +183,16 @@ typedef void (*oapv_fn_tx_t)(s16 *coef, s16 *t, int shift, int line);
 typedef void (*oapv_fn_itx_adj_t)(int *src, int *dst, int itrans_diff_idx, int diff_step, int shift);
 typedef int (*oapv_fn_quant_t)(s16 *coef, u8 qp, int q_matrix[OAPV_BLK_D], int log2_w, int log2_h, int bit_depth, int deadzone_offset);
 typedef void (*oapv_fn_dquant_t)(s16 *coef, s16 q_matrix[OAPV_BLK_D], int log2_w, int log2_h, s8 shift);
-typedef int (*oapv_fn_sad_t)(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int bit_depth);
-typedef s64 (*oapv_fn_ssd_t)(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int bit_depth);
-typedef void (*oapv_fn_diff_t)(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int s_diff, s16 *diff, int bit_depth);
+typedef int (*oapv_fn_sad_t)(int w, int h, void *src1, void *src2, int s_src1, int s_src2);
+typedef s64 (*oapv_fn_ssd_t)(int w, int h, void *src1, void *src2, int s_src1, int s_src2);
+typedef void (*oapv_fn_diff_t)(int w, int h, void *src1, void *src2, int s_src1, int s_src2, int s_diff, s16 *diff);
 
-typedef double (*oapv_fn_block_cost_t)(oapve_ctx_t *ctx, oapve_core_t *core, int log2_w, int log2_h, int c);
-typedef void (*oapv_fn_imgb_to_block_rc)(oapv_imgb_t *imgb, int c, int x_l, int y_l, int w_l, int h_l, s16 *block);
-typedef void (*oapv_fn_imgb_to_block)(void *src, int blk_w, int blk_h, int s_src, int offset_src, int s_dst, void *dst);
-typedef void (*oapv_fn_block_to_imgb)(void *src, int blk_w, int blk_h, int s_src, int offset_dst, int s_dst, void *dst);
-typedef void (*oapv_fn_img_pad)(oapve_ctx_t *ctx, oapv_imgb_t *imgb);
-typedef int (*oapv_fn_had8x8)(pel *org, int s_org);
+typedef double (*oapv_fn_enc_blk_cost_t)(oapve_ctx_t *ctx, oapve_core_t *core, int log2_w, int log2_h, int c);
+typedef void (*oapv_fn_imgb_to_blk_rc_t)(oapv_imgb_t *imgb, int c, int x_l, int y_l, int w_l, int h_l, s16 *block);
+typedef void (*oapv_fn_imgb_to_blk_t)(void *src, int blk_w, int blk_h, int s_src, int offset_src, int s_dst, void *dst);
+typedef void (*oapv_fn_blk_to_imgb_t)(void *src, int blk_w, int blk_h, int s_src, int offset_dst, int s_dst, void *dst);
+typedef void (*oapv_fn_img_pad_t)(oapve_ctx_t *ctx, oapv_imgb_t *imgb);
+typedef int (*oapv_fn_had8x8_t)(pel *org, int s_org);
 
 /*****************************************************************************
  * rate-control related
@@ -230,7 +231,8 @@ struct oapve_core {
     int          prev_1st_ac_ctx[N_C];
     int          tile_idx;
     int          prev_dc[N_C];
-
+    int          dc_diff; /* DC difference, which is represented in 17 bits */
+                          /* and coded as abs_dc_coeff_diff and sign_dc_coeff_diff */
     int          qp[N_C]; // QPs for Y, Cb(U), Cr(V)
     int          dq_shift[N_C];
 
@@ -300,15 +302,14 @@ struct oapve_ctx {
     const oapv_fn_sad_t      *fn_sad;
     const oapv_fn_ssd_t      *fn_ssd;
     const oapv_fn_diff_t     *fn_diff;
-    oapv_fn_imgb_to_block_rc  fn_imgb_to_block_rc;
-    oapv_fn_imgb_to_block     fn_imgb_to_block[N_C];
-    oapv_fn_block_to_imgb     fn_block_to_imgb[N_C];
-    oapv_fn_img_pad           fn_img_pad;
-    oapv_fn_block_cost_t      fn_block;
-    oapv_fn_had8x8            fn_had8x8;
-    int                       use_frm_hash;
-    void                     *tx_tbl;
+    oapv_fn_imgb_to_blk_rc_t  fn_imgb_to_blk_rc;
+    oapv_fn_imgb_to_blk_t     fn_imgb_to_blk[N_C];
+    oapv_fn_blk_to_imgb_t     fn_blk_to_imgb[N_C];
+    oapv_fn_img_pad_t         fn_img_pad;
+    oapv_fn_enc_blk_cost_t    fn_enc_blk;
+    oapv_fn_had8x8_t          fn_had8x8;
 
+    int                       use_frm_hash;
     oapve_rc_param_t          rc_param;
 
     /* platform specific data, if needed */
@@ -336,7 +337,7 @@ struct oapvd_tile {
     int          y;         /* y (row) position in a frame in unit of pixel */
     int          w;         /* tile width in unit of pixel */
     int          h;         /* tile height in unit of pixel */
-    u32          data_size; /* tile size including tile_size_minus1 syntax */
+    u32          data_size; /* tile size including tile_size syntax */
 
     u8          *bs_beg; /* start position of tile in input bistream */
     u8          *bs_end; /* end position of tile() in input bistream */
@@ -353,6 +354,8 @@ struct oapvd_core {
     int          prev_dc_ctx[N_C];
     int          prev_1st_ac_ctx[N_C];
     int          prev_dc[N_C];
+    int          dc_diff; /* DC difference, which is represented in 17 bits */
+                          /* and coded as abs_dc_coeff_diff and sign_dc_coeff_diff */
     int          qp[N_C];
     int          dq_shift[N_C];
     s16          q_mat[N_C][OAPV_BLK_D];
@@ -372,7 +375,7 @@ struct oapvd_ctx {
     oapv_imgb_t            *imgb;
     const oapv_fn_itx_t    *fn_itx;
     const oapv_fn_dquant_t *fn_dquant;
-    oapv_fn_block_to_imgb   fn_block_to_imgb[N_C];
+    oapv_fn_blk_to_imgb_t   fn_block_to_imgb[N_C];
     oapv_bs_t               bs;
 
     oapv_fh_t               fh;

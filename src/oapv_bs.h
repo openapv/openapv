@@ -81,28 +81,60 @@ int oapv_bsw_write(oapv_bs_t *bs, u32 val, int len);
 // start of decoder code
 #if ENABLE_DECODER
 ///////////////////////////////////////////////////////////////////////////////
-/*! is bitstream byte aligned? */
-static bool inline bsr_is_align8(oapv_bs_t *bs)
-{
-    return ((bs->leftbits & 0x7) == 0) ? true : false;
-}
+#if 0
+#if defined(X86F) || defined(ARMV8N_64)
+/* on X86 machine, 32-bit shift means remaining of original value, so we
+should set zero in that case. */
+#define BSR_SKIP_CODE(bs, size) \
+    oapv_assert((bs)->leftbits >= (size)); \
+    if((size) == 32) {(bs)->code = 0; (bs)->leftbits = 0;} \
+    else           {(bs)->code <<= (size); (bs)->leftbits -= (size);}
+#else
+#define BSR_SKIP_CODE(bs, size) \
+    oapv_assert((bs)->leftbits >= (size)); \
+    (bs)->code <<= (size); (bs)->leftbits -= (size);
+#endif
+#else
+#define BSR_SKIP_CODE(bs, size) \
+    oapv_assert((bs)->leftbits >= (size) && (size) <= 32); \
+    (bs)->code <<= (size); (bs)->leftbits -= (size);
+#endif
 
+/*! Is end of bitstream ? */
+#define BSR_IS_EOB(bs) (((bs)->cur > (bs)->end && (bs)->leftbits==0)? 1: 0)
+
+/*! Is bitstream byte aligned? */
+#define BSR_IS_BYTE_ALIGN(bs) ((((bs)->leftbits & 0x7) == 0)? 1: 0)
+
+/*! Is last byte of bitsteam? */
+#define BSR_IS_LAST_BYTE(bs) \
+    (((bs)->cur > (bs)->end && bs->leftbits > 0 && (bs)->leftbits <= 8)? 1: 0)
+
+/* get left byte count in BS */
+#define BSR_GET_LEFT_BYTE(bs) \
+    ((int)((bs)->end - (bs)->cur) + 1 + ((bs)->leftbits >> 3))
 /* get number of byte consumed */
-static int inline bsr_get_read_byte(oapv_bs_t *bs)
-{
-    return ((int)((bs)->cur - (bs)->beg) - ((bs)->leftbits >> 3));
-}
+#define BSR_GET_READ_BYTE(bs) \
+    ((int)((bs)->cur - (bs)->beg) - ((bs)->leftbits >> 3))
+/* get number of bit consumed */
+#define BSR_GET_READ_BIT(bs) \
+    (((int)((bs)->cur - (bs)->beg) << 3) - ((bs)->leftbits))
 
-static int inline bsr_get_remained_byte(oapv_bs_t *bs)
-{
-    return (bs->size - bsr_get_read_byte(bs));
-}
+/* get address of current reading */
+#define BSR_GET_CUR(bs) ((bs)->cur - (((bs)->leftbits + 7) >> 3))
+
+/* move to # bytes align position */
+#define BSR_MOVE_BYTE_ALIGN(bs, byte) \
+    (bs)->cur += (byte) - ((bs)->leftbits >> 3); \
+    (bs)->code = 0; \
+    (bs)->leftbits = 0;
 
 void oapv_bsr_init(oapv_bs_t *bs, u8 *buf, int size, oapv_bs_fn_flush_t fn_flush);
 int oapv_bsr_clz_in_code(u32 code);
+int oapv_bsr_clz(oapv_bs_t *bs);
 void oapv_bsr_align8(oapv_bs_t *bs);
 void oapv_bsr_skip(oapv_bs_t *bs, int size);
-void oapv_bsr_peek(oapv_bs_t *bs, u32 *val, int size);
+u32 oapv_bsr_peek(oapv_bs_t *bs, int size);
 void *oapv_bsr_sink(oapv_bs_t *bs);
 void oapv_bsr_move(oapv_bs_t *bs, u8 *pos);
 u32 oapv_bsr_read(oapv_bs_t *bs, int size);
