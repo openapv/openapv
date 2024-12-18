@@ -565,7 +565,7 @@ int main(int argc, const char **argv)
     int            frm_cnt[MAX_NUM_FRMS] = { 0 };
     double         bitrate_tot; // total bitrate (byte)
     double         psnr_avg[MAX_NUM_FRMS][MAX_NUM_CC] = { 0 };
-    int            is_inp_y4m, is_rec_y4m;
+    int            is_inp_y4m, is_rec_y4m = 0;
     y4m_params_t   y4m;
     int            is_out = 0, is_rec = 0;
     char          *errstr = NULL;

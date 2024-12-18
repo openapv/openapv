@@ -2068,7 +2068,6 @@ int oapvd_config(oapvd_t did, int cfg, void *buf, int *size)
 int oapvd_info(void *au, int au_size, oapv_au_info_t *aui)
 {
     int ret, frm_count = 0;
-    int pbu_cnt = 0;
     u8 *curpos;
     u32 remain;
 
@@ -2124,7 +2123,6 @@ int oapvd_info(void *au, int au_size, oapv_au_info_t *aui)
 
         curpos += pbu_size;
         remain = (remain < pbu_size)? 0: (remain - pbu_size);
-        ++pbu_cnt;
     }
     DUMP_SET(1);
     return OAPV_OK;
