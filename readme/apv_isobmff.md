@@ -32,7 +32,7 @@ class APV1SmapleEntry extends VisualSampleEntry('apv1'){
 
 ### Semantics
 
-The value of largest_frame_width and largest_frame_height of the APVCodecConfigurationBox shall be used for the value of width and height fields of the VisualSampleEntry, respectively.
+The largest one among the values of the frame_width field and frame_height field of the APVCodecConfigurationBox shall be used for the value of width and height fields of the VisualSampleEntry, respectively.
 
 When the sample entry name is 'apv1', the stream to which this sample entry applies shall be a compliant APV stream as viewed by an APV decoder operating under the configuration (including profile, level, and so on) given in the APVCodecConfigurationBox.
 

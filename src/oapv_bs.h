@@ -129,7 +129,7 @@ should set zero in that case. */
     (bs)->code = 0; \
     (bs)->leftbits = 0;
 
-void oapv_bsr_init(oapv_bs_t *bs, u8 *buf, int size, oapv_bs_fn_flush_t fn_flush);
+void oapv_bsr_init(oapv_bs_t *bs, u8 *buf, u32 size, oapv_bs_fn_flush_t fn_flush);
 int oapv_bsr_clz_in_code(u32 code);
 int oapv_bsr_clz(oapv_bs_t *bs);
 void oapv_bsr_align8(oapv_bs_t *bs);
