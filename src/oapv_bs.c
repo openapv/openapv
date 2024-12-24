@@ -206,7 +206,7 @@ static int bsr_flush(oapv_bs_t *bs, int byte)
     return 0;
 }
 
-void oapv_bsr_init(oapv_bs_t *bs, u8 *buf, int size, oapv_bs_fn_flush_t fn_flush)
+void oapv_bsr_init(oapv_bs_t *bs, u8 *buf, u32 size, oapv_bs_fn_flush_t fn_flush)
 {
     bs->size = size;
     bs->cur = buf;
