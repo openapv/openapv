@@ -2063,7 +2063,6 @@ int oapvd_config(oapvd_t did, int cfg, void *buf, int *size)
 int oapvd_info(void *au, int au_size, oapv_au_info_t *aui)
 {
     int ret, frm_count = 0;
-    int pbu_cnt = 0;
     u32 cur_read_size = 0;
 
     DUMP_SET(0);
@@ -2113,7 +2112,6 @@ int oapvd_info(void *au, int au_size, oapv_au_info_t *aui)
         }
         aui->num_frms = frm_count;
         cur_read_size += pbu_size + 4;
-        ++pbu_cnt;
     } while(cur_read_size < au_size);
     DUMP_SET(1);
     return OAPV_OK;

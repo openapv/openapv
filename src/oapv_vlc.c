@@ -1210,7 +1210,7 @@ int oapvd_vlc_dc_coeff(oapvd_ctx_t *ctx, oapvd_core_t *core, oapv_bs_t *bs, int 
 int oapvd_vlc_ac_coeff(oapvd_ctx_t *ctx, oapvd_core_t *core, oapv_bs_t *bs, s16 *coef, int c)
 {
     int        sign, level, prev_level, run;
-    int        scan_pos_offset, num_coeff, i, coef_cnt = 0;
+    int        scan_pos_offset, num_coeff, i;
     const u16 *scanp;
 
     scanp = oapv_tbl_scan;
@@ -1301,8 +1301,6 @@ int oapvd_vlc_ac_coeff(oapvd_ctx_t *ctx, oapvd_core_t *core, oapv_bs_t *bs, s16 
         bs->code <<= 1;
         bs->leftbits -= 1;
         coef[scanp[scan_pos_offset]] = sign ? -(s16)level : (s16)level;
-
-        coef_cnt++;
 
         if(scan_pos_offset >= num_coeff - 1) {
             break;
