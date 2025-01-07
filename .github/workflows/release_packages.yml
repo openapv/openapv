@@ -19,7 +19,8 @@ jobs:
         run: |
           cmake -S ${{github.workspace}} -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
           cmake --build ${{github.workspace}}/build
-          make package
+          cd ${{github.workspace}}/build
+          cpack -C Release
 
       - name: 'Upload PC Linux artifacts'
         uses: actions/upload-artifact@v4
@@ -58,7 +59,8 @@ jobs:
         run: |
           cmake -DCMAKE_BUILD_TYPE=Release -S ${{github.workspace}} -B ${{github.workspace}}/build-arm -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DARM=TRUE -DCMAKE_SYSTEM_PROCESSOR=aarch64
           cmake --build ${{github.workspace}}/build-arm
-          make package
+          cd ${{github.workspace}}/build-arm
+          cpack -C Release
  
       - name: 'Upload ARM artifacts'
         uses: actions/upload-artifact@v4
