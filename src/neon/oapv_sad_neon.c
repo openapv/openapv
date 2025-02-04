@@ -35,12 +35,13 @@
 #if ARM_NEON
 
 #if defined(__aarch64__)
+
 #define VADDVQ_S32_(s, v) \
     s += vaddvq_s32(v);
 #define VADDVQ_S64_(s, v) \
     s += vaddvq_s64(v);
 
-#else
+#else // __aarch64__
 
 #define VADDVQ_S32_(s, v) \
     { \
@@ -55,9 +56,9 @@
 #define vsubl_high_s16(a, b) \
     vsubl_s16(vget_high_s16(a), vget_high_s16(b))
 #define vmull_high_s32(a, b) \
-    vmul_s32(vget_high_s32(a), vget_high_s32(b))
+    vmull_s32(vget_high_s32(a), vget_high_s32(b))
 
-#endif
+#endif // __aarch64__
 
 /* SAD for 16bit **************************************************************/
 int sad_16b_neon_8x2n(int w, int h, void *src1, void *src2, int s_src1, int s_src2)
@@ -70,13 +71,13 @@ int sad_16b_neon_8x2n(int w, int h, void *src1, void *src2, int s_src1, int s_sr
     // Loop unrolled    
 #pragma GCC unroll 8
     for (int i = 0; i < 8; ++i)
-    { // Row 0
+    { // Row
         // Loading one row (8 elements) each of src1 and src_2
         s1_vector = vld1q_s16(s1);
         s1 += s_src1;
         s2_vector = vld1q_s16(s2);
         s2 += s_src2;
-        
+
         // Getting absolute difference s1_vector from s2_vector and storing in 32 bits
         sad_vector = vabal_s16(sad_vector, vget_low_s16(s1_vector), vget_low_s16(s2_vector));
         sad_vector = vabal_high_s16(sad_vector, s1_vector, s2_vector);
@@ -97,7 +98,6 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
     s64 ssd = 0;
     s16* s1 = (s16*) src1;
     s16* s2 = (s16*) src2;
-    s16 i;
     int16x8_t s1_vector, s2_vector;
     int32x4_t diff1, diff2;
     int32x2_t diff1_low, diff2_low;
@@ -395,7 +395,6 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     int16x8_t pred4_8x16b, pred5_8x16b, pred6_8x16b, pred7_8x16b;
     int16x8_t out0_8x16b, out1_8x16b, out2_8x16b, out3_8x16b;
     int16x8_t out4_8x16b, out5_8x16b, out6_8x16b, out7_8x16b;
-    int16x8x2_t out0_8x16bx2, out1_8x16bx2, out2_8x16bx2, out3_8x16bx2;
 
     src0_8x16b = (vld1q_s16(&org[0]));
     org = org + s_org;
