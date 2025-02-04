@@ -8,7 +8,7 @@ OpenAPV provides the reference implementation of the [APV codec](#apv-codec) whi
 The OpenAPV supports the following features:
 
 - fully compliant with 422-10 and 400-10 profile of [APV codec](#apv-codec)
-- Low complexity by optimization for ARM NEON and x86(64bit) SEE/AVX CPU
+- Low complexity by optimization for ARM NEON and x86(64bit) SSE/AVX CPU
 - Supports tile-based multi-threading
 - Supports Various metadata including HDR10/10+ and user-defined format
 - Constant QP (CQP), average bitrate (ABR), and constant rate factor (CRF) are supported
@@ -57,9 +57,15 @@ The APV codec standard has the following features:
   cmake --build build-arm
   ```
 
+- Build Instructions Android
+  ```
+  cmake -DCMAKE_BUILD_TYPE=Release -S . -B build-android -DCMAKE_TOOLCHAIN_FILE=/android-ndk-r26c/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=30
+  cmake --build build-android
+  ```
+
 - Output Location
-  - Executable applications can be found under build/bin/ or build-arm/bin/
-  - Library files can be found under build/lib/ or build-arm/lib/
+  - Executable applications can be found under build/bin/, build-arm/bin/ or build-android/bin/
+  - Library files can be found under build/lib/, build-arm/lib/ or build-android/lib/
 
 ## How to use
 ### Encoder
