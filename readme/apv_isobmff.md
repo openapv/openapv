@@ -21,7 +21,7 @@ This document specifies methods to store data encoded with Advanced Professional
 
 ### Description
 
-The sample entry with APV1SampleEntry type specifies that the track contains APV coded video data samples. This type of sample entry shall use APVCodecConfiguraionBox.
+The sample entry with APV1SampleEntry type specifies that the track contains APV coded video data samples. This type of sample entry shall use APVCodecConfigurationBox.
 
 
 ### Syntax
@@ -36,7 +36,7 @@ The largest one among the values of the frame_width field and frame_height field
 
 When the sample entry name is 'apv1', the stream to which this sample entry applies shall be a compliant APV stream as viewed by an APV decoder operating under the configuration (including profile, level, and so on) given in the APVCodecConfigurationBox.
 
-The compressorname field of the VisualSampleEntry shall have '\012APV Coding'. The sample entry with APV1SampleEntry type specifies that the track contains APV coded video data samples. This type of sample entry shall use APVCodecConfiguraionBox.
+The compressorname field of the VisualSampleEntry shall have '\012APV Coding'. The sample entry with APV1SampleEntry type specifies that the track contains APV coded video data samples. This type of sample entry shall use APVCodecConfigurationBox.
 
 ## APV Codec Configuration Box
 
