@@ -26,7 +26,7 @@ The sample entry with APV1SampleEntry type specifies that the track contains APV
 
 ### Syntax
 
-class APV1SmapleEntry extends VisualSampleEntry('apv1'){
+class APV1SampleEntry extends VisualSampleEntry('apv1'){
 	APVCodecConfigurationBox	config;
 }
 
