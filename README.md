@@ -59,7 +59,7 @@ The APV codec standard has the following features:
 
 - Build Instructions Android
   ```
-  cmake -DCMAKE_BUILD_TYPE=Release -S . -B build-android -DCMAKE_TOOLCHAIN_FILE=/android-ndk-r26c/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=30
+  cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -S . -B build-android -DCMAKE_TOOLCHAIN_FILE=/android-ndk-r26c/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=30
   cmake --build build-android
   ```
 
