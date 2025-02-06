@@ -55,22 +55,22 @@
     vabal_s16(a, vget_high_s16(b), vget_high_s16(c))
 #define vsubl_high_s16(a, b) \
     vsubl_s16(vget_high_s16(a), vget_high_s16(b))
-#define vmull_high_s32(a, b) \
-    vmull_s32(vget_high_s32(a), vget_high_s32(b))
+#define vmlal_high_s32(a, b, c) \
+    vmlal_s32(a, vget_high_s32(b), vget_high_s32(c))
 
 #endif // __aarch64__
 
 /* SAD for 16bit **************************************************************/
-int sad_16b_neon_8x2n(int w, int h, void *src1, void *src2, int s_src1, int s_src2)
+static int sad_16b_neon_8x2n(int w, int h, void *src1, void *src2, int s_src1, int s_src2)
 {
     int sad = 0;
     s16* s1 = (s16*) src1;
     s16* s2 = (s16*) src2;
     int16x8_t s1_vector, s2_vector;
     int32x4_t  sad_vector = vdupq_n_s32(0);
-    // Loop unrolled    
+    // Loop unrolling
 #pragma GCC unroll 8
-    for (int i = 0; i < 8; ++i)
+    for (s32 i = 0; i < 8; ++i)
     { // Row
         // Loading one row (8 elements) each of src1 and src_2
         s1_vector = vld1q_s16(s1);
@@ -78,7 +78,7 @@ int sad_16b_neon_8x2n(int w, int h, void *src1, void *src2, int s_src1, int s_sr
         s2_vector = vld1q_s16(s2);
         s2 += s_src2;
 
-        // Getting absolute difference s1_vector from s2_vector and storing in 32 bits
+        // Getting absolute difference s1_vector and s2_vector and storing in 32 bits
         sad_vector = vabal_s16(sad_vector, vget_low_s16(s1_vector), vget_low_s16(s2_vector));
         sad_vector = vabal_high_s16(sad_vector, s1_vector, s2_vector);
     }
@@ -101,9 +101,11 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
     int16x8_t s1_vector, s2_vector;
     int32x4_t diff1, diff2;
     int32x2_t diff1_low, diff2_low;
-    int64x2_t sq_diff1_low, sq_diff1_high, sq_diff2_low, sq_diff2_high, sq_diff;
-    // Loop unrolling      
-    { // Row 0
+    int64x2_t sq_diff = vdupq_n_s64(0);
+    // Loop unrolling
+#pragma GCC unroll 8
+    for (s32 i = 0; i < 8; ++i)
+    { // Row
         s1_vector = vld1q_s16(s1);
         s1 += s_src1;
         s2_vector = vld1q_s16(s2);
@@ -114,161 +116,10 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
         diff1_low = vget_low_s32(diff1);
         diff2_low = vget_low_s32(diff2);
 
-        sq_diff1_low = vmull_s32(diff1_low, diff1_low);
-        sq_diff1_high = vmull_high_s32(diff1, diff1);
-        sq_diff2_low = vmull_s32(diff2_low, diff2_low);
-        sq_diff2_high = vmull_high_s32(diff2, diff2);
-
-        sq_diff = vaddq_s64(sq_diff1_low, sq_diff1_high);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
-    }
-    { // Row 1
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
-        diff2 = vsubl_high_s16(s1_vector, s2_vector);
-        diff1_low = vget_low_s32(diff1);
-        diff2_low = vget_low_s32(diff2);
-
-        sq_diff1_low = vmull_s32(diff1_low, diff1_low);
-        sq_diff1_high = vmull_high_s32(diff1, diff1);
-        sq_diff2_low = vmull_s32(diff2_low, diff2_low);
-        sq_diff2_high = vmull_high_s32(diff2, diff2);
-
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_high);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
-    }
-    { // Row 2
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
-        diff2 = vsubl_high_s16(s1_vector, s2_vector);
-        diff1_low = vget_low_s32(diff1);
-        diff2_low = vget_low_s32(diff2);
-
-        sq_diff1_low = vmull_s32(diff1_low, diff1_low);
-        sq_diff1_high = vmull_high_s32(diff1, diff1);
-        sq_diff2_low = vmull_s32(diff2_low, diff2_low);
-        sq_diff2_high = vmull_high_s32(diff2, diff2);
-
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_high);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
-    }
-    { // Row 3
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
-        diff2 = vsubl_high_s16(s1_vector, s2_vector);
-        diff1_low = vget_low_s32(diff1);
-        diff2_low = vget_low_s32(diff2);
-
-        sq_diff1_low = vmull_s32(diff1_low, diff1_low);
-        sq_diff1_high = vmull_high_s32(diff1, diff1);
-        sq_diff2_low = vmull_s32(diff2_low, diff2_low);
-        sq_diff2_high = vmull_high_s32(diff2, diff2);
-
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_high);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
-    }
-    { // Row 4
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
-        diff2 = vsubl_high_s16(s1_vector, s2_vector);
-        diff1_low = vget_low_s32(diff1);
-        diff2_low = vget_low_s32(diff2);
-
-        sq_diff1_low = vmull_s32(diff1_low, diff1_low);
-        sq_diff1_high = vmull_high_s32(diff1, diff1);
-        sq_diff2_low = vmull_s32(diff2_low, diff2_low);
-        sq_diff2_high = vmull_high_s32(diff2, diff2);
-
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_high);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
-    }
-    { // Row 5
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
-        diff2 = vsubl_high_s16(s1_vector, s2_vector);
-        diff1_low = vget_low_s32(diff1);
-        diff2_low = vget_low_s32(diff2);
-
-        sq_diff1_low = vmull_s32(diff1_low, diff1_low);
-        sq_diff1_high = vmull_high_s32(diff1, diff1);
-        sq_diff2_low = vmull_s32(diff2_low, diff2_low);
-        sq_diff2_high = vmull_high_s32(diff2, diff2);
-
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_high);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
-    }
-    { // Row 6
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
-        diff2 = vsubl_high_s16(s1_vector, s2_vector);
-        diff1_low = vget_low_s32(diff1);
-        diff2_low = vget_low_s32(diff2);
-
-        sq_diff1_low = vmull_s32(diff1_low, diff1_low);
-        sq_diff1_high = vmull_high_s32(diff1, diff1);
-        sq_diff2_low = vmull_s32(diff2_low, diff2_low);
-        sq_diff2_high = vmull_high_s32(diff2, diff2);
-
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_high);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
-    }
-    { // Row 7
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff1 = vsubl_s16(vget_low_s16(s1_vector), vget_low_s16(s2_vector));
-        diff2 = vsubl_high_s16(s1_vector, s2_vector);
-        diff1_low = vget_low_s32(diff1);
-        diff2_low = vget_low_s32(diff2);
-
-        sq_diff1_low = vmull_s32(diff1_low, diff1_low);
-        sq_diff1_high = vmull_high_s32(diff1, diff1);
-        sq_diff2_low = vmull_s32(diff2_low, diff2_low);
-        sq_diff2_high = vmull_high_s32(diff2, diff2);
-
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff1_high);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_low);
-        sq_diff = vaddq_s64(sq_diff, sq_diff2_high);
+        sq_diff = vmlal_s32(sq_diff, diff1_low, diff1_low);
+        sq_diff = vmlal_high_s32(sq_diff, diff1, diff1);
+        sq_diff = vmlal_s32(sq_diff, diff2_low, diff2_low);
+        sq_diff = vmlal_high_s32(sq_diff, diff2, diff2);
     }
     VADDVQ_S64_(ssd, sq_diff)
     return ssd;
@@ -285,8 +136,10 @@ static void diff_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, 
     s16* s1 = (s16*) src1;
     s16* s2 = (s16*) src2;
     int16x8_t s1_vector, s2_vector, diff_vector;
-    // Loop unrolled    
-    { // Row 0
+    // Loop unrolling
+#pragma GCC unroll 8
+    for (s32 i = 0; i < 8; ++i)
+    { // Row
         // Loading one row (8 elements) each of src1 and src_2
         s1_vector = vld1q_s16(s1);
         s1 += s_src1;
@@ -299,85 +152,9 @@ static void diff_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, 
         // Storing the result in diff
         vst1q_s16(diff, diff_vector);
         diff += s_diff;
-    }    
-    { // Row 1
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff_vector = vsubq_s16(s1_vector, s2_vector);
-
-        vst1q_s16(diff, diff_vector);
-        diff += s_diff;
-    }    
-    { // Row 2
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff_vector = vsubq_s16(s1_vector, s2_vector);
-
-        vst1q_s16(diff, diff_vector);
-        diff += s_diff;
-    }   
-    { // Row 3
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff_vector = vsubq_s16(s1_vector, s2_vector);
-
-        vst1q_s16(diff, diff_vector);
-        diff += s_diff;
-    }    
-    { // Row 4
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff_vector = vsubq_s16(s1_vector, s2_vector);
-
-        vst1q_s16(diff, diff_vector);
-        diff += s_diff;
-    }    
-    { // Row 5
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff_vector = vsubq_s16(s1_vector, s2_vector);
-
-        vst1q_s16(diff, diff_vector);
-        diff += s_diff;
-    }    
-    { // Row 6
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff_vector = vsubq_s16(s1_vector, s2_vector);
-
-        vst1q_s16(diff, diff_vector);
-        diff += s_diff;
-    }    
-    { // Row 7
-        s1_vector = vld1q_s16(s1);
-        s1 += s_src1;
-        s2_vector = vld1q_s16(s2);
-        s2 += s_src2;
-
-        diff_vector = vsubq_s16(s1_vector, s2_vector);
-
-        vst1q_s16(diff, diff_vector);
-        diff += s_diff;
     }
 }
+
 const oapv_fn_diff_t oapv_tbl_fn_diff_16b_neon[2] = {
     diff_16b_neon_8x8,
     NULL
@@ -396,22 +173,22 @@ int oapv_dc_removed_had8x8_neon(pel* org, int s_org)
     int16x8_t out0_8x16b, out1_8x16b, out2_8x16b, out3_8x16b;
     int16x8_t out4_8x16b, out5_8x16b, out6_8x16b, out7_8x16b;
 
-    src0_8x16b = (vld1q_s16(&org[0]));
-    org = org + s_org;
-    src1_8x16b = (vld1q_s16(&org[0]));
-    org = org + s_org;
-    src2_8x16b = (vld1q_s16(&org[0]));
-    org = org + s_org;
-    src3_8x16b = (vld1q_s16(&org[0]));
-    org = org + s_org;
-    src4_8x16b = (vld1q_s16(&org[0]));
-    org = org + s_org;
-    src5_8x16b = (vld1q_s16(&org[0]));
-    org = org + s_org;
-    src6_8x16b = (vld1q_s16(&org[0]));
-    org = org + s_org;
-    src7_8x16b = (vld1q_s16(&org[0]));
-    org = org + s_org;
+    src0_8x16b = (vld1q_s16(org));
+    org += s_org;
+    src1_8x16b = (vld1q_s16(org));
+    org += s_org;
+    src2_8x16b = (vld1q_s16(org));
+    org += s_org;
+    src3_8x16b = (vld1q_s16(org));
+    org += s_org;
+    src4_8x16b = (vld1q_s16(org));
+    org += s_org;
+    src5_8x16b = (vld1q_s16(org));
+    org += s_org;
+    src6_8x16b = (vld1q_s16(org));
+    org += s_org;
+    src7_8x16b = (vld1q_s16(org));
+    org += s_org;
 
     /**************** 8x8 horizontal transform *******************************/
     /***********************    8x8 16 bit Transpose  ************************/
