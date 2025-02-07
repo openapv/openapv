@@ -69,7 +69,9 @@ static int sad_16b_neon_8x2n(int w, int h, void *src1, void *src2, int s_src1, i
     int16x8_t s1_vector, s2_vector;
     int32x4_t  sad_vector = vdupq_n_s32(0);
     // Loop unrolling
+#ifndef _MSC_VER
 #pragma GCC unroll 8
+#endif
     for (s32 i = 0; i < 8; ++i)
     { // Row
         // Loading one row (8 elements) each of src1 and src_2
@@ -103,7 +105,9 @@ static s64 ssd_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, in
     int32x2_t diff1_low, diff2_low;
     int64x2_t sq_diff = vdupq_n_s64(0);
     // Loop unrolling
+#ifndef _MSC_VER
 #pragma GCC unroll 8
+#endif
     for (s32 i = 0; i < 8; ++i)
     { // Row
         s1_vector = vld1q_s16(s1);
@@ -137,7 +141,9 @@ static void diff_16b_neon_8x8(int w, int h, void *src1, void *src2, int s_src1, 
     s16* s2 = (s16*) src2;
     int16x8_t s1_vector, s2_vector, diff_vector;
     // Loop unrolling
+#ifndef _MSC_VER
 #pragma GCC unroll 8
+#endif
     for (s32 i = 0; i < 8; ++i)
     { // Row
         // Loading one row (8 elements) each of src1 and src_2
