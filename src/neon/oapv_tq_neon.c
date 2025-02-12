@@ -47,10 +47,15 @@ const s32 oapv_coeff[8][4] =
     {18,-50, 75,-89}  // 8th row coeff
 };
 
+#if !defined(__aarch64__)
+#define vpaddq_s32(a, b) \
+    vcombine_s32(vpadd_s32(vget_low_s32(a), vget_high_s32(a)), vpadd_s32(vget_low_s32(b), vget_high_s32(b)))
+#endif
+
 #define multiply_s32(part1, part2, coeff, res) \
     low = vmulq_s32(part1, coeff); \
     high = vmulq_s32(part2, coeff); \
-    res = vcombine_s32(vpadd_s32(vget_low_s32(low), vget_high_s32(low)), vpadd_s32(vget_low_s32(high), vget_high_s32(high))); \
+    res = vpaddq_s32(low, high)
 
 static void oapv_tx_pb8b_neon(s16 *src, s16 *dst, const int shift, int line)
 {
