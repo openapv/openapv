@@ -138,6 +138,59 @@ endif()
 ########################################
 # CPack project packaging
 ########################################
+# Check the operating system
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    message(STATUS "Linux system")
+    # Read the /etc/os-release file to determine the distribution
+    file(READ "/etc/os-release" OS_RELEASE_CONTENT)
+
+    if(OS_RELEASE_CONTENT MATCHES "ID=debian" OR OS_RELEASE_CONTENT MATCHES "ID=ubuntu")
+        message(STATUS "Debian-based system detected")
+        message(STATUS "Use DEB generator while generating installation package using CPack")
+        set(CPACK_GENERATOR "DEB")
+    elseif(OS_RELEASE_CONTENT MATCHES "ID=rhel" OR OS_RELEASE_CONTENT MATCHES "ID=fedora" OR OS_RELEASE_CONTENT MATCHES "ID=centos")
+        message(STATUS "Red Hat-based system detected")
+        message(STATUS "Use RPM generator while generating installation package using CPack")
+        set(CPACK_GENERATOR "RPM")
+    elseif(OS_RELEASE_CONTENT MATCHES "ID=opensuse")
+        message(STATUS "SUSE-based system detected")
+        message(STATUS "Use RPM generator while generating installation package using CPack")
+        set(CPACK_GENERATOR "RPM")
+    else()
+        message(STATUS "Other Linux distribution detected")
+        message(STATUS "Use TGZ generator while generating installation package using CPack")
+        set(CPACK_GENERATOR "TGZ")
+    endif()
+
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    message(STATUS "Windows system")
+    
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        # Check if the compiler path contains 'ucrt64'
+        if(CMAKE_C_COMPILER MATCHES "ucrt64")
+            message(STATUS "UCRT64 environment detected")
+            message(STATUS "Use NSIS generator while generating installation package using CPack")
+            set(CPACK_GENERATOR "NSIS")
+        else()
+            message(STATUS "Not using UCRT64 compiler. Compiler ID: ${CMAKE_C_COMPILER}")
+            message(STATUS "Use TGZ generator while generating installation package using CPack")
+            set(CPACK_GENERATOR "TGZ")
+        endif()
+    # Check if the compiler is MSVC
+    elseif(CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+        message(STATUS "Using Microsoft Visual Studio (MSVC) compiler")
+        message(STATUS "Use NSIS generator while generating installation package using CPack")
+        set(CPACK_GENERATOR "NSIS")
+    else()
+        message(STATUS "Not using MSVC compiler. Compiler ID: ${CMAKE_C_COMPILER_ID}.")
+        message(STATUS "Use ZIP generator while generating installation package using CPack")
+        set(CPACK_GENERATOR "ZIP")
+    endif()
+else()
+    message(STATUS "Other OS: ${CMAKE_SYSTEM_NAME}")
+    message(STATUS "Use ZIP generator while generating installation package using CPack")
+    set(CPACK_GENERATOR "ZIP")
+endif()
 
 # Packaging
 include(InstallRequiredSystemLibraries)
@@ -156,9 +209,7 @@ set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
 set(CPACK_PACKAGE_CHECKSUM MD5)
 
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "CPNCF")
-
-set(CPACK_GENERATOR "DEB")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "OpenAPV")
 
 include(CPack)
 
